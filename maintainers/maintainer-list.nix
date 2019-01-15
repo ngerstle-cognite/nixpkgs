@@ -475,6 +475,11 @@
     github = "bandresen";
     name = "Benjamin Andresen";
   };
+  baracoder = {
+    email = "baracoder@googlemail.com";
+    github = "baracoder";
+    name = "Herman Fries";
+  };
   barrucadu = {
     email = "mike@barrucadu.co.uk";
     github = "barrucadu";
@@ -2180,6 +2185,11 @@
     github = "joncojonathan";
     name = "Jonathan Haddock";
   };
+  jorsn = {
+    name = "Johannes Rosenberger";
+    email = "johannes@jorsn.eu";
+    github = "jorsn";
+  };
   jpdoyle = {
     email = "joethedoyle@gmail.com";
     github = "jpdoyle";
@@ -3569,7 +3579,7 @@
   };
   psyanticy = {
     email = "iuns@outlook.fr";
-    github = "Assassinkin";
+    github = "PsyanticY";
     name = "Psyanticy";
   };
   puffnfresh = {
@@ -3919,6 +3929,11 @@
     email = "s@uyon.co";
     github = "sauyon";
     name = "Sauyon Lee";
+  };
+  sb0 = {
+    email = "sb@m-labs.hk";
+    github = "sbourdeauducq";
+    name = "Sébastien Bourdeauducq";
   };
   sboosali = {
     email = "SamBoosalis@gmail.com";
