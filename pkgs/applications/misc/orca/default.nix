@@ -4,20 +4,18 @@
 , python, pygobject3, gtk3, gnome3, substituteAll
 , at-spi2-atk, at-spi2-core, pyatspi, dbus, dbus-python, pyxdg
 , xkbcomp, procps, lsof, coreutils, gsettings-desktop-schemas
-, speechd, brltty, setproctitle, gst_all_1, gst-python
+, speechd, brltty, liblouis, setproctitle, gst_all_1, gst-python
 }:
 
-let
+buildPythonApplication rec {
   pname = "orca";
-  version = "3.30.1";
-in buildPythonApplication rec {
-  name = "${pname}-${version}";
+  version = "3.32.0";
 
   format = "other";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${name}.tar.xz";
-    sha256 = "1b9s69frjmghjm1p9a4rrvknl9m0qlwr7mr4lsxkvjnblhsnw0g7";
+    url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
+    sha256 = "05jqzlg0f1x53hyl0l9282ynmw37159g6dsbrid12b7sjs12cc1i";
   };
 
   patches = [
@@ -36,9 +34,10 @@ in buildPythonApplication rec {
   ];
 
   propagatedBuildInputs = [
-    # TODO: re-add liblouis when it is fixed
-    pygobject3 pyatspi dbus-python pyxdg brltty speechd gst-python setproctitle
+    pygobject3 pyatspi dbus-python pyxdg brltty liblouis speechd gst-python setproctitle
   ];
+
+  strictDeps = false;
 
   buildInputs = [
     python gtk3 at-spi2-atk at-spi2-core dbus gsettings-desktop-schemas

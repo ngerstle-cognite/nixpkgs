@@ -7,14 +7,14 @@
 }:
 
 buildPythonPackage rec {
-  version = "1.1.16";
+  version = "1.1.19";
   pname = "azure-common";
   disabled = isPyPy;
 
   src = fetchPypi {
     inherit pname version;
     extension = "zip";
-    sha256 = "2606ae77ff81c0036965b92ec2efe03eaec02a66714140ca0f7aa401b8b9bbb0";
+    sha256 = "622d9360a1b61172b4c0d1cc58f939c68402aa19ca44872ab3d224d913aa6d0c";
   };
 
   propagatedBuildInputs = [ azure-nspkg ];

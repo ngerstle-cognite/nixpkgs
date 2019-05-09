@@ -17,12 +17,12 @@ assert enableJemalloc -> jemalloc != null;
 let inherit (stdenv.lib) optional; in
 
 stdenv.mkDerivation rec {
-  name = "nghttp2-${version}";
-  version = "1.35.1";
+  pname = "nghttp2";
+  version = "1.38.0";
 
   src = fetchurl {
-    url = "https://github.com/nghttp2/nghttp2/releases/download/v${version}/nghttp2-${version}.tar.bz2";
-    sha256 = "020k9xkca386yfs47zypb4x83f4l6vqpf8qw1xrhmrd29x4wxvam";
+    url = "https://github.com/${pname}/${pname}/releases/download/v${version}/${pname}-${version}.tar.bz2";
+    sha256 = "156r3myrglkmrdv4zh151g9zcr7b92zjn15wx5i9ypw0naanjc4g";
   };
 
   outputs = [ "bin" "out" "dev" "lib" ];
@@ -50,6 +50,5 @@ stdenv.mkDerivation rec {
     description = "A C implementation of HTTP/2";
     license = licenses.mit;
     platforms = platforms.all;
-    maintainers = with maintainers; [ wkennington ];
   };
 }

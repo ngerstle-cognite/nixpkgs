@@ -1,4 +1,4 @@
-{ stdenv, fetchzip, vscode-utils, jq, mono, clang-tools, writeScript
+{ stdenv, fetchzip, vscode-utils, jq, mono, clang-tools, writeScript, runtimeShell
 , gdbUseFixed ? true, gdb # The gdb default setting will be fixed to specified. Use version from `PATH` otherwise.
 }:
 
@@ -53,7 +53,7 @@ let
   };
 
   openDebugAD7Script = writeScript "OpenDebugAD7" ''
-    #!${stdenv.shell}
+    #!${runtimeShell}
     BIN_DIR="$(cd "$(dirname "$0")" && pwd -P)"
     ${if gdbUseFixed
         then ''
@@ -68,8 +68,8 @@ vscode-utils.buildVscodeMarketplaceExtension {
   mktplcRef = {
     name = "cpptools";
     publisher = "ms-vscode";
-    version = "0.20.1";
-    sha256 = "1gmnkrn26n57vx2nm5hhalkkl2irak38m2lklgja0bi10jb6y08l";
+    version = "0.22.1";
+    sha256 = "1f79vbp19k1zm2y5djr4vim0h5y5rnm96rg8fx2h9zb8i559230k";
   };
 
   buildInputs = [

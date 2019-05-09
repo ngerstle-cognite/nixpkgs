@@ -20,13 +20,13 @@ let
   };
 in stdenv.mkDerivation rec {
   name = "dolphin-emu-${version}";
-  version = "2018-12-25";
+  version = "5.0-9976";
 
   src = fetchFromGitHub {
     owner = "dolphin-emu";
     repo = "dolphin";
-    rev = "ca2a2c98f252d21dc609d26f4264a43ed091b8fe";
-    sha256 = "0903hp7fkh08ggjx8zrsvwhh1x8bprv3lh2d8yci09al1cqqj5cb";
+    rev = "63f30cc44da248b0226e1c8724b3e53ecf4c768f";
+    sha256 = "0lkf571kzmw26fybl1lqpvhc81jkbh4hcvi3766bb7mvvzapkybd";
   };
 
   enableParallelBuilding = true;
@@ -47,6 +47,9 @@ in stdenv.mkDerivation rec {
   cmakeFlags = [
     "-DUSE_SHARED_ENET=ON"
     "-DENABLE_LTO=ON"
+    "-DDOLPHIN_WC_REVISION=${src.rev}"
+    "-DDOLPHIN_WC_DESCRIBE=${version}"
+    "-DDOLPHIN_WC_BRANCH=master"
   ] ++ stdenv.lib.optionals stdenv.isDarwin [
     "-DOSX_USE_DEFAULT_SEARCH_PATH=True"
   ];

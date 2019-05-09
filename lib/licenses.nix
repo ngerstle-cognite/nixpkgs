@@ -145,6 +145,12 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
     free = false;
   };
 
+  cc-by-nc-30 = spdx {
+    spdxId = "CC-BY-NC-3.0";
+    fullName = "Creative Commons Attribution Non Commercial 3.0 Unported";
+    free = false;
+  };
+
   cc-by-nc-40 = spdx {
     spdxId = "CC-BY-NC-4.0";
     fullName = "Creative Commons Attribution Non Commercial 4.0 International";
@@ -451,6 +457,11 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
     fullName = "libpng License";
   };
 
+  libpng2 = {
+    fullName = "libpng License v2"; # 1.6.36+
+    url = "http://www.libpng.org/pub/png/src/libpng-LICENSE.txt";
+  };
+
   libtiff = spdx {
     spdxId = "libtiff";
     fullName = "libtiff License";
@@ -554,6 +565,11 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
   openssl = spdx {
     spdxId = "OpenSSL";
     fullName = "OpenSSL License";
+  };
+
+  osl2 = spdx {
+    spdxId = "OSL-2.0";
+    fullName = "Open Software License 2.0";
   };
 
   osl21 = spdx {

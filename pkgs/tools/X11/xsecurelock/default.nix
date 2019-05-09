@@ -1,24 +1,24 @@
 { lib, stdenv, fetchFromGitHub, autoreconfHook, pkgconfig
-, libX11, libXcomposite, libXft, libXmu, pam, apacheHttpd, imagemagick
-, pamtester, xscreensaver, xset }:
+, libX11, libXcomposite, libXft, libXmu, libXrandr, libXext, libXScrnSaver
+, pam, apacheHttpd, imagemagick, pamtester, xscreensaver, xset }:
 
 stdenv.mkDerivation rec {
   name = "xsecurelock-${version}";
-  version = "1.2";
+  version = "1.3.1";
 
   src = fetchFromGitHub {
     owner = "google";
     repo = "xsecurelock";
     rev = "v${version}";
-    sha256 = "1vaw2m3yyfazj1x7xdwppmm0ch075q399g5vzrmhhrkzdrs53r1x";
+    sha256 = "17666b0ah5pfspxbfx9cw3lfmzx6b47r54bacwzzhfq6wbw6ci6k";
   };
 
   nativeBuildInputs = [
     autoreconfHook pkgconfig
   ];
   buildInputs = [
-    libX11 libXcomposite libXft libXmu pam
-    apacheHttpd imagemagick pamtester
+    libX11 libXcomposite libXft libXmu libXrandr libXext libXScrnSaver
+    pam apacheHttpd imagemagick pamtester
   ];
 
   configureFlags = [

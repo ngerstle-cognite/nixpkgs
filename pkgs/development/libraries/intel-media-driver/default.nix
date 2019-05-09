@@ -5,20 +5,19 @@
 
 stdenv.mkDerivation rec {
   name = "intel-media-driver-${version}";
-  version = "18.3.0";
+  version = "19.1.0";
 
   src = fetchFromGitHub {
     owner  = "intel";
     repo   = "media-driver";
     rev    = "intel-media-${version}";
-    sha256 = "15kcyg9ss2v1bbw6yvxqb833h1vs0h659n8ix0x5x03cfm1wsi57";
+    sha256 = "072ry87h1lds14fqb2sfz3n2sssvacamaxv2gj4nd8agnzbwizn7";
   };
 
-  cmakeFlags = [ "-DINSTALL_DRIVER_SYSCONF=OFF" ];
-
-  preConfigure = ''
-    cmakeFlags="$cmakeFlags -DLIBVA_DRIVERS_PATH=$out/lib/dri"
-  '';
+  cmakeFlags = [
+    "-DINSTALL_DRIVER_SYSCONF=OFF"
+    "-DLIBVA_DRIVERS_PATH=${placeholder "out"}/lib/dri"
+  ];
 
   nativeBuildInputs = [ cmake pkgconfig ];
 

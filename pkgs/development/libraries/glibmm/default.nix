@@ -1,17 +1,20 @@
-{ stdenv, fetchurl, pkgconfig, gnum4, glib, libsigcxx, gnome3 }:
+{ stdenv, fetchurl, pkgconfig, gnum4, glib, libsigcxx, gnome3, darwin }:
 
 stdenv.mkDerivation rec {
   pname = "glibmm";
-  version = "2.58.0";
+  version = "2.60.0";
 
   src = fetchurl {
     url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
-    sha256 = "0idnaii4h3mdym2a55gkavipyxigwvbgfmzmwql85s4rgciqjhfk";
+    sha256 = "1g7jxqd270dv2d83r7pf5893mwpz7d5xib0q01na2yalh34v38d3";
   };
 
   outputs = [ "out" "dev" ];
 
   nativeBuildInputs = [ pkgconfig gnum4 ];
+  buildInputs = stdenv.lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [
+    Cocoa
+  ]);
   propagatedBuildInputs = [ glib libsigcxx ];
 
   enableParallelBuilding = true;

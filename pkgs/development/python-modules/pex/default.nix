@@ -5,11 +5,11 @@
 
 buildPythonPackage rec {
   pname = "pex";
-  version = "1.5.3";
+  version = "1.6.6";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "a0244c9e25172598fca73cb61e2a2f133503565c95d99210c3d5c0e85950c4bd";
+    sha256 = "ca887bedc9c6e0eab72fcb4c20eda8fff975d06b75993a85ee1dfc763ba38e86";
   };
 
   prePatch = ''
@@ -24,6 +24,7 @@ buildPythonPackage rec {
     homepage = "https://github.com/pantsbuild/pex";
     license = licenses.asl20;
     maintainers = with maintainers; [ copumpkin ];
+    broken = true;
   };
 
 }

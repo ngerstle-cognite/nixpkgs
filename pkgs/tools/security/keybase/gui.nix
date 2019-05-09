@@ -1,18 +1,19 @@
 { stdenv, fetchurl, alsaLib, atk, cairo, cups, udev, hicolor-icon-theme
-, dbus, expat, fontconfig, freetype, gdk_pixbuf, glib, gnome2, gtk3, gnome3
-, libnotify, nspr, nss, pango, systemd, xorg, autoPatchelfHook, wrapGAppsHook }:
+, dbus, expat, fontconfig, freetype, gdk_pixbuf, glib, gtk3, gnome3
+, libnotify, nspr, nss, pango, systemd, xorg, autoPatchelfHook, wrapGAppsHook
+, runtimeShell, gsettings-desktop-schemas }:
 
 let
-  versionSuffix = "20190104191034.69b3ee25b7";
+  versionSuffix = "20190412141809.5262f90fd9";
 in
 
 stdenv.mkDerivation rec {
   name = "keybase-gui-${version}";
-  version = "2.13.0"; # Find latest version from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
+  version = "3.2.2"; # Find latest version from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
 
   src = fetchurl {
     url = "https://s3.amazonaws.com/prerelease.keybase.io/linux_binaries/deb/keybase_${version + "-" + versionSuffix}_amd64.deb";
-    sha256 = "5b188185dc6d594cd18876a2c955bb6481598c206f048cfd80ac2e7e8022241e";
+    sha256 = "20f0cbfae52a8afbc88c1130279b2c2ced21fd498eee7e43c88f5b88abd8f21b";
   };
 
   nativeBuildInputs = [
@@ -31,8 +32,7 @@ stdenv.mkDerivation rec {
     freetype
     gdk_pixbuf
     glib
-    gnome2.GConf
-    gnome3.gsettings-desktop-schemas
+    gsettings-desktop-schemas
     gtk3
     libnotify
     nspr
@@ -72,7 +72,7 @@ stdenv.mkDerivation rec {
     mv opt/keybase $out/share/
 
     cat > $out/bin/keybase-gui <<EOF
-    #!${stdenv.shell}
+    #!${runtimeShell}
 
     checkFailed() {
       if [ "\$NIX_SKIP_KEYBASE_CHECKS" = "1" ]; then

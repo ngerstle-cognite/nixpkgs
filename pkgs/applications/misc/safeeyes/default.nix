@@ -6,18 +6,18 @@ let inherit (python3Packages) python buildPythonApplication fetchPypi;
 in buildPythonApplication rec {
   name = "${pname}-${version}";
   pname = "safeeyes";
-  version = "2.0.6";
+  version = "2.0.9";
   namePrefix = "";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0s14pxicgq33srvhf6bvfq48wv3z4rlsmzkccz4ky9vh3gfx7zka";
+    sha256 = "13q06jv8hm0dynmr3g5pf1m4j3w9iabrpz1nhpl02f7x0d90whg2";
   };
 
   buildInputs = [
     gtk3
     gobject-introspection
-    gnome3.defaultIconTheme
+    gnome3.adwaita-icon-theme
     gnome3.adwaita-icon-theme
   ];
 

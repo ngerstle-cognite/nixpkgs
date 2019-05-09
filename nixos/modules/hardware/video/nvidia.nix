@@ -79,6 +79,14 @@ in
       '';
     };
 
+    hardware.nvidia.optimus_prime.allowExternalGpu = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Configure X to allow external NVIDIA GPUs when using optimus.
+      '';
+    };
+
     hardware.nvidia.optimus_prime.nvidiaBusId = lib.mkOption {
       type = lib.types.string;
       default = "";
@@ -134,6 +142,7 @@ in
       deviceSection = optionalString optimusCfg.enable
         ''
           BusID "${optimusCfg.nvidiaBusId}"
+          ${optionalString optimusCfg.allowExternalGpu "Option \"AllowExternalGpus\""}
         '';
       screenSection =
         ''
@@ -171,6 +180,11 @@ in
 
     environment.systemPackages = [ nvidia_x11.bin nvidia_x11.settings ]
       ++ lib.filter (p: p != null) [ nvidia_x11.persistenced ];
+
+    systemd.tmpfiles.rules = optional config.virtualisation.docker.enableNvidia
+        "L+ /run/nvidia-docker/bin - - - - ${nvidia_x11.bin}/origBin"
+      ++ optional (nvidia_x11.persistenced != null && config.virtualisation.docker.enableNvidia)
+        "L+ /run/nvidia-docker/extras/bin/nvidia-persistenced - - - - ${nvidia_x11.persistenced}/origBin/nvidia-persistenced";
 
     boot.extraModulePackages = [ nvidia_x11.bin ];
 

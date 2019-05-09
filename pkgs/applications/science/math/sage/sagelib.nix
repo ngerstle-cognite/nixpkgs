@@ -20,7 +20,7 @@
 , jinja2
 , lcalc
 , lrcalc
-, libgap
+, gap
 , linbox
 , m4ri
 , m4rie
@@ -30,6 +30,7 @@
 , numpy
 , pari
 , pkgconfig
+, pkg-config
 , planarity
 , ppl
 , pynac
@@ -46,6 +47,8 @@
 , jupyter_core
 , libhomfly
 , libbraiding
+, gmpy2
+, pplpy
 }:
 
 # This is the core sage python package. Everything else is just wrappers gluing
@@ -63,11 +66,14 @@ buildPythonPackage rec {
     iml
     perl
     jupyter_core
+    pkg-config
+    pip # needed to query installed packages
   ];
 
   buildInputs = [
     gd
     readline
+    iml
   ];
 
   propagatedBuildInputs = [
@@ -88,7 +94,7 @@ buildPythonPackage rec {
     glpk
     gsl
     lcalc
-    libgap
+    gap
     libmpc
     linbox
     lrcalc
@@ -111,6 +117,8 @@ buildPythonPackage rec {
     cysignals
     libhomfly
     libbraiding
+    gmpy2
+    pplpy
   ];
 
   buildPhase = ''

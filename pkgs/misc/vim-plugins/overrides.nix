@@ -1,9 +1,11 @@
 { lib, stdenv
-, python, cmake, vim, ruby
-, which, fetchgit, llvmPackages, rustPlatform
-, xkb-switch, fzf, skim
+, python, cmake, meson, vim, ruby
+, which, fetchgit, fetchurl
+, llvmPackages, rustPlatform
+, xkb-switch, fzf, skim, stylish-haskell
 , python3, boost, icu, ncurses
 , ycmd, rake
+, gobject-introspection, glib, wrapGAppsHook
 , substituteAll
 , languagetool
 , Cocoa, CoreFoundation, CoreServices
@@ -14,37 +16,42 @@
 , gomodifytags, gotags, gotools, go-motion
 , gnused, reftools, gogetdoc, gometalinter
 , impl, iferr, gocode, gocode-gomod, go-tools
+
+# vCoolor dep
+, gnome3
 }:
 
 self: super: {
 
   vim2nix = buildVimPluginFrom2Nix {
-    name = "vim2nix";
+    pname = "vim2nix";
+    version = "1.0";
     src = ./vim2nix;
     dependencies = with super; [ vim-addon-manager ];
   };
 
   fzfWrapper = buildVimPluginFrom2Nix {
-    name = fzf.name;
+    pname = "fzf";
+    version = fzf.version;
     src = fzf.src;
   };
 
   skim = buildVimPluginFrom2Nix {
-    name = skim.name;
+    pname = "skim";
+    version = skim.version;
     src = skim.vim;
   };
 
   LanguageClient-neovim = let
-    LanguageClient-neovim-src = fetchgit {
-      url = "https://github.com/autozimu/LanguageClient-neovim";
-      rev = "59f0299e8f7d7edd0653b5fc005eec74c4bf4aba";
-      sha256 = "0x6729w7v3bxlpvm8jz1ybn23qa0zqfgxl88q2j0bbs6rvp0w1jq";
+    LanguageClient-neovim-src = fetchurl {
+      url = "https://github.com/autozimu/LanguageClient-neovim/archive/0.1.140.tar.gz";
+      sha256 = "0cixwm9wnn6vlam6mp57j436n92c4bvj5rs6j2qcv7qip8d2ggyw";
     };
     LanguageClient-neovim-bin = rustPlatform.buildRustPackage {
       name = "LanguageClient-neovim-bin";
       src = LanguageClient-neovim-src;
 
-      cargoSha256 = "1afmz14j7ma2nrsx0njcqbh2wa430dr10hds78c031286ppgwjls";
+      cargoSha256 = "0f591zv4f7spks2hx22nkq78sj42259gi7flnnpr1nfs40d7n13n";
       buildInputs = stdenv.lib.optionals stdenv.isDarwin [ CoreServices ];
 
       # FIXME: Use impure version of CoreFoundation because of missing symbols.
@@ -54,10 +61,11 @@ self: super: {
       '';
     };
   in buildVimPluginFrom2Nix {
-    name = "LanguageClient-neovim-2018-09-07";
+    pname = "LanguageClient-neovim";
+    version = "0.1.140";
     src = LanguageClient-neovim-src;
 
-    propogatedBuildInputs = [ LanguageClient-neovim-bin ];
+    propagatedBuildInputs = [ LanguageClient-neovim-bin ];
 
     preFixup = ''
       substituteInPlace "$out"/share/vim-plugins/LanguageClient-neovim/autoload/LanguageClient.vim \
@@ -67,7 +75,8 @@ self: super: {
 
   # do not auto-update this one, as the name clashes with vim-snippets
   vim-docbk-snippets = buildVimPluginFrom2Nix {
-    name = "vim-docbk-snippets-2017-11-02";
+    pname = "vim-docbk-snippets";
+    version = "2017-11-02";
     src = fetchgit {
       url = "https://github.com/jhradilek/vim-snippets";
       rev = "69cce66defdf131958f152ea7a7b26c21ca9d009";
@@ -131,6 +140,10 @@ self: super: {
     '';
   });
 
+  deoplete-fish = super.deoplete-fish.overrideAttrs(old: {
+    dependencies = with super; [ deoplete-nvim vim-fish ];
+  });
+
   deoplete-go = super.deoplete-go.overrideAttrs(old: {
     buildInputs = [ python3 ];
     buildPhase = ''
@@ -154,6 +167,12 @@ self: super: {
     dependencies = with super; [ webapi-vim ];
   });
 
+  meson = buildVimPluginFrom2Nix {
+    inherit (meson) pname version src;
+    preInstall = "cd data/syntax-highlighting/vim";
+    meta.maintainers = with stdenv.lib.maintainers; [ vcunat ];
+  };
+
   ncm2 = super.ncm2.overrideAttrs(old: {
     dependencies = with super; [ nvim-yarp ];
   });
@@ -166,6 +185,35 @@ self: super: {
   ncm2-ultisnips = super.ncm2-ultisnips.overrideAttrs(old: {
     dependencies = with super; [ ultisnips ];
   });
+
+  sved = let
+    # we put the script in its own derivation to benefit the magic of wrapGAppsHook
+    svedbackend = stdenv.mkDerivation {
+      name = "svedbackend-${super.sved.name}";
+      inherit (super.sved) src;
+      nativeBuildInputs = [ wrapGAppsHook ];
+      buildInputs = [
+        gobject-introspection
+        glib
+        (python3.withPackages(ps: with ps; [ pygobject3 pynvim dbus-python ]))
+      ];
+      preferLocalBuild = true;
+      installPhase = ''
+        install -Dt $out/bin ftplugin/evinceSync.py
+      '';
+    };
+  in
+    super.sved.overrideAttrs(old: {
+      preferLocalBuild = true;
+      postPatch = ''
+        rm ftplugin/evinceSync.py
+        ln -s ${svedbackend}/bin/evinceSync.py ftplugin/evinceSync.py
+      '';
+      meta = {
+        description = "synctex support between vim/neovim and evince";
+      };
+    });
+
 
   vimshell-vim = super.vimshell-vim.overrideAttrs(old: {
     dependencies = with super; [ vimproc-vim ];
@@ -364,4 +412,35 @@ self: super: {
     };
   });
 
+  vim-stylish-haskell = super.vim-stylish-haskell.overrideAttrs (old: {
+    postPatch = old.postPatch or "" + ''
+      substituteInPlace ftplugin/haskell/stylish-haskell.vim --replace \
+        'g:stylish_haskell_command = "stylish-haskell"' \
+        'g:stylish_haskell_command = "${stylish-haskell}/bin/stylish-haskell"'
+    '';
+  });
+
+  vCoolor-vim = super.vCoolor-vim.overrideAttrs(old: {
+    # on linux can use either Zenity or Yad.
+    propagatedBuildInputs = [ gnome3.zenity ];
+    meta = {
+      description = "Simple color selector/picker plugin";
+      license = stdenv.lib.licenses.publicDomain;
+    };
+  });
+
+  unicode-vim = let
+    unicode-data = fetchurl {
+      url = http://www.unicode.org/Public/UNIDATA/UnicodeData.txt;
+      sha256 = "16b0jzvvzarnlxdvs2izd5ia0ipbd87md143dc6lv6xpdqcs75s9";
+    };
+  in super.unicode-vim.overrideAttrs(old: {
+
+      # redirect to /dev/null else changes terminal color
+      buildPhase = ''
+        cp "${unicode-data}" autoload/unicode/UnicodeData.txt
+        echo "Building unicode cache"
+        ${vim}/bin/vim --cmd ":set rtp^=$PWD" -c 'ru plugin/unicode.vim' -c 'UnicodeCache' -c ':echohl Normal' -c ':q' > /dev/null
+      '';
+  });
 }

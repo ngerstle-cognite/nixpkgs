@@ -21,6 +21,8 @@ stdenv.mkDerivation rec {
     libXt libxslt libiconv docbook_xml_dtd_412
   ] ++ stdenv.lib.optional stdenv.isDarwin Carbon;
 
+  NIX_CFLAGS_COMPILE = "-Wno-error";
+
   configureFlags = [
     "--enable-zlib"
     "--enable-readline"
@@ -44,7 +46,6 @@ stdenv.mkDerivation rec {
     description = "Set of libraries and utilities to access smart cards";
     homepage = https://github.com/OpenSC/OpenSC/wiki;
     license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ wkennington ];
     platforms = platforms.all;
   };
 }

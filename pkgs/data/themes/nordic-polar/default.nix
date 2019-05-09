@@ -2,16 +2,16 @@
 
 stdenv.mkDerivation rec {
   name = "nordic-polar-${version}";
-  version = "1.3.0";
+  version = "1.5.0";
 
   srcs = [
     (fetchurl {
-      url = "https://github.com/EliverLara/Nordic-Polar/releases/download/v${version}/Nordic-Polar.tar.xz";
-      sha256 = "1c5zgymkwd89fr680c49siwbkhfbay56iq9vlyqkj1dp0xnc528s";
+      url = "https://github.com/EliverLara/Nordic-Polar/releases/download/v.${version}/Nordic-Polar.tar.xz";
+      sha256 = "0ddccxvyf929045x6fm8xyx6rvb0d6wh6pylycwgqqm4vxbdwnly";
     })
     (fetchurl {
-      url = "https://github.com/EliverLara/Nordic-Polar/releases/download/v${version}/Nordic-Polar-standard-buttons.tar.xz";
-      sha256 = "0nxzcgqzc42qvnhafranz6rwanqb4wzf9ychm5m4yrlp3ngw38p4";
+      url = "https://github.com/EliverLara/Nordic-Polar/releases/download/v.${version}/Nordic-Polar-standard-buttons.tar.xz";
+      sha256 = "0q0qfy0aw80rds6isx3pjrqx4zrq2crxrm29nrmyzh4gr7n17li6";
     })
   ];
 

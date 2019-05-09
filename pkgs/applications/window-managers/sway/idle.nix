@@ -5,17 +5,23 @@
 
 stdenv.mkDerivation rec {
   name = "swayidle-${version}";
-  version = "1.1";
+  version = "1.3";
 
   src = fetchFromGitHub {
     owner = "swaywm";
     repo = "swayidle";
     rev = version;
-    sha256 = "1xmcd5wajyrxc8171pl7vhxqg4da482k5n1h0x1j9n07wz50wjqm";
+    sha256 = "04agcbhc473jkk7npb40i94ny8naykxzpjcw2lvl05kxv65y5d9v";
   };
+
+  postPatch = ''
+    sed -iE "s/version: '1\.2',/version: '${version}',/" meson.build
+  '';
 
   nativeBuildInputs = [ meson ninja pkgconfig scdoc ];
   buildInputs = [ wayland wayland-protocols systemd ];
+
+  mesonFlags = [ "-Dman-pages=enabled" "-Dlogind=enabled" ];
 
   meta = with stdenv.lib; {
     description = "Idle management daemon for Wayland";

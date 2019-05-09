@@ -2,8 +2,9 @@
 
 let
   mkCoqPackages' = self: coq:
-    let callPackage = newScope self ; in rec {
-      inherit callPackage coq;
+    let newScope = self.newScope;
+        callPackage = self.callPackage; in {
+      inherit coq;
       coqPackages = self;
 
       contribs = recurseIntoAttrs
@@ -17,7 +18,9 @@ let
       Cheerios = callPackage ../development/coq-modules/Cheerios {};
       CoLoR = callPackage ../development/coq-modules/CoLoR {};
       coq-ext-lib = callPackage ../development/coq-modules/coq-ext-lib {};
+      coq-extensible-records = callPackage ../development/coq-modules/coq-extensible-records {};
       coq-haskell = callPackage ../development/coq-modules/coq-haskell { };
+      coqhammer = callPackage ../development/coq-modules/coqhammer {};
       coqprime = callPackage ../development/coq-modules/coqprime {};
       coquelicot = callPackage ../development/coq-modules/coquelicot {};
       corn = callPackage ../development/coq-modules/corn {};
@@ -32,9 +35,13 @@ let
       iris = callPackage ../development/coq-modules/iris {};
       math-classes = callPackage ../development/coq-modules/math-classes { };
       mathcomp = callPackage ../development/coq-modules/mathcomp { };
+      mathcomp-analysis = callPackage ../development/coq-modules/mathcomp-analysis { };
+      mathcomp-bigenough = callPackage ../development/coq-modules/mathcomp-bigenough { };
+      mathcomp-finmap = callPackage ../development/coq-modules/mathcomp-finmap { };
       metalib = callPackage ../development/coq-modules/metalib { };
       multinomials = callPackage ../development/coq-modules/multinomials {};
       paco = callPackage ../development/coq-modules/paco {};
+      paramcoq = callPackage ../development/coq-modules/paramcoq {};
       QuickChick = callPackage ../development/coq-modules/QuickChick {};
       simple-io = callPackage ../development/coq-modules/simple-io { };
       ssreflect = callPackage ../development/coq-modules/ssreflect { };
@@ -69,7 +76,7 @@ in rec {
    * a `dontFilter` attribute into the Coq derivation.
    */
   mkCoqPackages = coq:
-    let self = mkCoqPackages' self coq; in
+    let self = lib.makeScope newScope (lib.flip mkCoqPackages' coq); in
     if coq.dontFilter or false then self
     else filterCoqPackages coq self;
 
@@ -88,7 +95,7 @@ in rec {
     version = "8.8.2";
   };
   coq_8_9 = callPackage ../applications/science/logic/coq {
-    version = "8.9+beta1";
+    version = "8.9.0";
   };
 
   coqPackages_8_5 = mkCoqPackages coq_8_5;

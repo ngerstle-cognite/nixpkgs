@@ -16,12 +16,12 @@
     outputBin = "out";
   };
 in stdenv.mkDerivation (rec {
-  name = "libgpg-error-${version}";
-  version = "1.33";
+  pname = "libgpg-error";
+  version = "1.36";
 
   src = fetchurl {
-    url = "mirror://gnupg/libgpg-error/${name}.tar.bz2";
-    sha256 = "1zq3pw93d0ani8bam7f4qjivll1b0zg9qbblwwvcjip7ark84f2x";
+    url = "mirror://gnupg/${pname}/${pname}-${version}.tar.bz2";
+    sha256 = "0z696dmhfxm2n6pmr8b857wwljq9h633yi99bhbn7h88f91rigds";
   };
 
   postPatch = ''

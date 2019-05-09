@@ -3,26 +3,26 @@
 let
   wheel_source = fetchPypi {
     pname = "wheel";
-    version = "0.32.2";
+    version = "0.33.1";
     format = "wheel";
-    sha256 = "1216licil12jjixfqvkb84xkync5zz0fdc2kgzhl362z3xqjsgn9";
+    sha256 = "8eb4a788b3aec8abf5ff68d4165441bc57420c9f64ca5f471f58c3969fe08668";
   };
   setuptools_source = fetchPypi {
     pname = "setuptools";
-    version = "40.6.2";
+    version = "41.0.0";
     format = "wheel";
-    sha256 = "88ee6bcd5decec9bd902252e02e641851d785c6e5e75677d2744a9d13fed0b0a";
+    sha256 = "e67486071cd5cdeba783bd0b64f5f30784ff855b35071c8670551fd7fc52d4a1";
   };
 
 in stdenv.mkDerivation rec {
   pname = "pip";
-  version = "18.1";
+  version = "19.0.3";
   name = "${python.libPrefix}-bootstrapped-${pname}-${version}";
 
   src = fetchPypi {
     inherit pname version;
     format = "wheel";
-    sha256 = "7909d0a0932e88ea53a7014dfd14522ffef91a464daaaf5c573343852ef98550";
+    sha256 = "bd812612bbd8ba84159d9ddc0266b7fbce712fc9bc98c82dee5750546ec8ec64";
   };
 
   unpackPhase = ''

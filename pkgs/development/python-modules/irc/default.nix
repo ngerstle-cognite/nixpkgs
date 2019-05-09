@@ -1,10 +1,13 @@
-{ buildPythonPackage, fetchPypi
+{ buildPythonPackage, fetchPypi, isPy3k
 , six, jaraco_logging, jaraco_text, jaraco_stream, pytz, jaraco_itertools
-, setuptools_scm }:
+, setuptools_scm, jaraco_collections
+}:
 
 buildPythonPackage rec {
   pname = "irc";
   version = "17.0";
+
+  disabled = !isPy3k;
 
   src = fetchPypi {
     inherit pname version;
@@ -21,5 +24,6 @@ buildPythonPackage rec {
     jaraco_stream
     pytz
     jaraco_itertools
+    jaraco_collections
   ];
 }

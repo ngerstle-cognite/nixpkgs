@@ -4,11 +4,14 @@
 
 with stdenv.lib;
 stdenv.mkDerivation rec {
-  name = "cyrus-sasl-${version}${optionalString (kerberos == null) "-without-kerberos"}";
+  name = "cyrus-sasl-${version}";
   version = "2.1.27";
 
   src = fetchurl {
-    url = "ftp://ftp.cyrusimap.org/cyrus-sasl/${name}.tar.gz";
+    urls =
+      [ "http://www.cyrusimap.org/releases/${name}.tar.gz"
+        "http://www.cyrusimap.org/releases/old/${name}.tar.gz"
+      ];
     sha256 = "1m85zcpgfdhm43cavpdkhb1s2zq1b31472hq1w1gs3xh94anp1i6";
   };
 

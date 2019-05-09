@@ -1,34 +1,72 @@
 { stdenv, callPackage, lib, fetchurl, fetchpatch, runCommand, makeWrapper
-, jdk, zip, unzip, bash, writeCBin, coreutils
-, which, python, perl, gnused, gnugrep, findutils
+, zip, unzip, bash, writeCBin, coreutils
+, which, python, perl, gawk, gnused, gnutar, gnugrep, gzip, findutils
 # Apple dependencies
 , cctools, clang, libcxx, CoreFoundation, CoreServices, Foundation
 # Allow to independently override the jdks used to build and run respectively
-, buildJdk ? jdk, runJdk ? jdk
+, buildJdk, runJdk
+, buildJdkName
+, runtimeShell
 # Always assume all markers valid (don't redownload dependencies).
 # Also, don't clean up environment variables.
 , enableNixHacks ? false
 }:
 
 let
-  srcDeps = lib.singleton (
-    fetchurl {
+  srcDeps = [
+    (fetchurl {
       url = "https://github.com/google/desugar_jdk_libs/archive/915f566d1dc23bc5a8975320cd2ff71be108eb9c.zip";
       sha256 = "0b926df7yxyyyiwm9cmdijy6kplf0sghm23sf163zh8wrk87wfi7";
-    }
-  );
+    })
+
+    (fetchurl {
+        url = "https://mirror.bazel.build/bazel_java_tools/java_tools_pkg-0.5.1.tar.gz";
+        sha256 = "1ld8m5cj9j0r474f56pixcfi0xvx3w7pzwahxngs8f6ns0yimz5w";
+    })
+  ];
 
   distDir = runCommand "bazel-deps" {} ''
     mkdir -p $out
     for i in ${builtins.toString srcDeps}; do cp $i $out/$(stripHash $i); done
   '';
 
-  defaultShellPath = lib.makeBinPath [ bash coreutils findutils gnugrep gnused which unzip ];
+  defaultShellPath = lib.makeBinPath
+    # Keep this list conservative. For more exotic tools, prefer to use
+    # @rules_nixpkgs to pull in tools from the nix repository. Example:
+    #
+    # WORKSPACE:
+    #
+    #     nixpkgs_git_repository(
+    #         name = "nixpkgs",
+    #         revision = "def5124ec8367efdba95a99523dd06d918cb0ae8",
+    #     )
+    #
+    #     # This defines an external Bazel workspace.
+    #     nixpkgs_package(
+    #         name = "bison",
+    #         repositories = { "nixpkgs": "@nixpkgs//:default.nix" },
+    #     )
+    #
+    # some/BUILD.bazel:
+    #
+    #     genrule(
+    #        ...
+    #        cmd = "$(location @bison//:bin/bison) -other -args",
+    #        tools = [
+    #            ...
+    #            "@bison//:bin/bison",
+    #        ],
+    #     )
+    #
+    [ bash coreutils findutils gawk gnugrep gnutar gnused gzip which unzip ];
+
+  # Java toolchain used for the build and tests
+  javaToolchain = "@bazel_tools//tools/jdk:toolchain_host${buildJdkName}";
 
 in
 stdenv.mkDerivation rec {
 
-  version = "0.21.0";
+  version = "0.24.0";
 
   meta = with lib; {
     homepage = "https://github.com/bazelbuild/bazel/";
@@ -38,17 +76,26 @@ stdenv.mkDerivation rec {
     platforms = platforms.linux ++ platforms.darwin;
   };
 
-  # additional tests that check bazel’s functionality
+  # Additional tests that check bazel’s functionality. Execute
+  #
+  #     nix-build . -A bazel.tests
+  #
+  # in the nixpkgs checkout root to exercise them locally.
   passthru.tests = {
-    python_bin_path = callPackage ./python-bin-path-test.nix {};
+    pythonBinPath = callPackage ./python-bin-path-test.nix {};
+    bashTools = callPackage ./bash-tools-test.nix {};
   };
 
   name = "bazel-${version}";
 
   src = fetchurl {
-    url = "https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-dist.zip";
-    sha256 = "1d3x0f1hzaiqq00pd65bks7v8kbv57m13jsing7y0y9id0g87jvc";
+    url = "https://github.com/bazelbuild/bazel/releases/download/${version}/${name}-dist.zip";
+    sha256 = "11gsc00ghxqkbci8nrflkwq1lcvqawlgkaryj458b24si6bjl7b2";
   };
+
+  # Necessary for the tests to pass on Darwin with sandbox enabled.
+  # Bazel starts a local server and needs to bind a local address.
+  __darwinAllowLocalNetworking = true;
 
   sourceRoot = ".";
 
@@ -125,9 +172,15 @@ stdenv.mkDerivation rec {
 
     genericPatches = ''
       # Substitute python's stub shebang to plain python path. (see TODO add pr URL)
+      # See also `postFixup` where python is added to $out/nix-support
       substituteInPlace src/main/java/com/google/devtools/build/lib/bazel/rules/python/python_stub_template.txt\
           --replace "/usr/bin/env python" "${python}/bin/python" \
           --replace "NIX_STORE_PYTHON_PATH" "${python}/bin/python" \
+
+      # md5sum is part of coreutils
+      sed -i 's|/sbin/md5|md5sum|' \
+        src/BUILD
+
       # substituteInPlace is rather slow, so prefilter the files with grep
       grep -rlZ /bin src/main/java/com/google/devtools | while IFS="" read -r -d "" path; do
         # If you add more replacements here, you must change the grep above!
@@ -142,11 +195,6 @@ stdenv.mkDerivation rec {
       substituteInPlace scripts/bootstrap/compile.sh \
           --replace /bin/sh ${customBash}/bin/bash
 
-      # We only build with JDK8 for now, since JDK11 does not compile bazel
-      substituteInPlace tools/jdk/default_java_toolchain.bzl \
-        --replace '"jvm_opts": JDK9_JVM_OPTS' \
-                  '"jvm_opts": JDK8_JVM_OPTS'
-
       # add nix environment vars to .bazelrc
       cat >> .bazelrc <<EOF
       build --experimental_distdir=${distDir}
@@ -156,6 +204,7 @@ stdenv.mkDerivation rec {
       build --linkopt="-Wl,$(echo $NIX_LDFLAGS | sed -e 's/ /" --linkopt="-Wl,/g')"
       build --host_linkopt="-Wl,$(echo $NIX_LDFLAGS | sed -e 's/ /" --host_linkopt="-Wl,/g')"
       build --host_javabase='@local_jdk//:jdk'
+      build --host_java_toolchain='${javaToolchain}'
       EOF
 
       # add the same environment vars to compile.sh
@@ -164,6 +213,7 @@ stdenv.mkDerivation rec {
           -e "/\$command \\\\$/a --linkopt=\"-Wl,$(echo $NIX_LDFLAGS | sed -e 's/ /" --linkopt=\"-Wl,/g')\" \\\\" \
           -e "/\$command \\\\$/a --host_linkopt=\"-Wl,$(echo $NIX_LDFLAGS | sed -e 's/ /" --host_linkopt=\"-Wl,/g')\" \\\\" \
           -e "/\$command \\\\$/a --host_javabase='@local_jdk//:jdk' \\\\" \
+          -e "/\$command \\\\$/a --host_java_toolchain='${javaToolchain}' \\\\" \
           -i scripts/bootstrap/compile.sh
 
       # --experimental_strict_action_env (which will soon become the
@@ -174,8 +224,17 @@ stdenv.mkDerivation rec {
         src/main/java/com/google/devtools/build/lib/bazel/rules/BazelRuleClassProvider.java \
         --replace /bin:/usr/bin ${defaultShellPath}
 
+      # This is necessary to avoid:
+      # "error: no visible @interface for 'NSDictionary' declares the selector
+      # 'initWithContentsOfURL:error:'"
+      # This can be removed when the apple_sdk is upgraded beyond 10.13+
+      sed -i '/initWithContentsOfURL:versionPlistUrl/ {
+        N
+        s/error:nil\];/\];/
+      }' tools/osx/xcode_locator.m
+
       # append the PATH with defaultShellPath in tools/bash/runfiles/runfiles.bash
-      echo "PATH=$PATH:${defaultShellPath}" >> runfiles.bash.tmp
+      echo "PATH=\$PATH:${defaultShellPath}" >> runfiles.bash.tmp
       cat tools/bash/runfiles/runfiles.bash >> runfiles.bash.tmp
       mv runfiles.bash.tmp tools/bash/runfiles/runfiles.bash
 
@@ -199,17 +258,27 @@ stdenv.mkDerivation rec {
     customBash
   ] ++ lib.optionals (stdenv.isDarwin) [ cctools clang libcxx CoreFoundation CoreServices Foundation ];
 
-  # If TMPDIR is in the unpack dir we run afoul of blaze's infinite symlink
-  # detector (see com.google.devtools.build.lib.skyframe.FileFunction).
-  # Change this to $(mktemp -d) as soon as we figure out why.
+  # Bazel makes extensive use of symlinks in the WORKSPACE.
+  # This causes problems with infinite symlinks if the build output is in the same location as the
+  # Bazel WORKSPACE. This is why before executing the build, the source code is moved into a
+  # subdirectory.
+  # Failing to do this causes "infinite symlink expansion detected"
+  preBuildPhases = ["preBuildPhase"];
+  preBuildPhase = ''
+    mkdir bazel_src
+    shopt -s dotglob extglob
+    mv !(bazel_src) bazel_src
+  '';
 
   buildPhase = ''
-    export TMPDIR=/tmp/.bazel-$UID
-    ./compile.sh
-    scripts/generate_bash_completion.sh \
-        --bazel=./output/bazel \
-        --output=output/bazel-complete.bash \
-        --prepend=scripts/bazel-complete-template.bash
+    # Increasing memory during compilation might be necessary.
+    # export BAZEL_JAVAC_OPTS="-J-Xmx2g -J-Xms200m"
+    ./bazel_src/compile.sh
+    ./bazel_src/scripts/generate_bash_completion.sh \
+        --bazel=./bazel_src/output/bazel \
+        --output=./bazel_src/output/bazel-complete.bash \
+        --prepend=./bazel_src/scripts/bazel-complete-header.bash \
+        --prepend=./bazel_src/scripts/bazel-complete-template.bash
   '';
 
   installPhase = ''
@@ -217,15 +286,15 @@ stdenv.mkDerivation rec {
 
     # official wrapper scripts that searches for $WORKSPACE_ROOT/tools/bazel
     # if it can’t find something in tools, it calls $out/bin/bazel-real
-    cp scripts/packages/bazel.sh $out/bin/bazel
-    mv output/bazel $out/bin/bazel-real
+    cp ./bazel_src/scripts/packages/bazel.sh $out/bin/bazel
+    mv ./bazel_src/output/bazel $out/bin/bazel-real
 
     wrapProgram "$out/bin/bazel" --add-flags --server_javabase="${runJdk}"
 
     # shell completion files
     mkdir -p $out/share/bash-completion/completions $out/share/zsh/site-functions
-    mv output/bazel-complete.bash $out/share/bash-completion/completions/bazel
-    cp scripts/zsh_completion/_bazel $out/share/zsh/site-functions/
+    mv ./bazel_src/output/bazel-complete.bash $out/share/bash-completion/completions/bazel
+    cp ./bazel_src/scripts/zsh_completion/_bazel $out/share/zsh/site-functions/
   '';
 
   doInstallCheck = true;
@@ -233,16 +302,20 @@ stdenv.mkDerivation rec {
     export TEST_TMPDIR=$(pwd)
 
     hello_test () {
-      $out/bin/bazel test --test_output=errors \
+      $out/bin/bazel test \
+        --test_output=errors \
+        --java_toolchain='${javaToolchain}' \
         examples/cpp:hello-success_test \
         examples/java-native/src/test/java/com/example/myproject:hello
     }
+
+    cd ./bazel_src
 
     # test whether $WORKSPACE_ROOT/tools/bazel works
 
     mkdir -p tools
     cat > tools/bazel <<"EOF"
-    #!${stdenv.shell} -e
+    #!${runtimeShell} -e
     exit 1
     EOF
     chmod +x tools/bazel
@@ -251,7 +324,7 @@ stdenv.mkDerivation rec {
     ! hello_test
 
     cat > tools/bazel <<"EOF"
-    #!${stdenv.shell} -e
+    #!${runtimeShell} -e
     exec "$BAZEL_REAL" "$@"
     EOF
 
@@ -262,7 +335,10 @@ stdenv.mkDerivation rec {
   # Save paths to hardcoded dependencies so Nix can detect them.
   postFixup = ''
     mkdir -p $out/nix-support
-    echo "${customBash} ${defaultShellPath}" > $out/nix-support/depends
+    echo "${customBash} ${defaultShellPath}" >> $out/nix-support/depends
+    # The templates get tar’d up into a .jar,
+    # so nix can’t detect python is needed in the runtime closure
+    echo "${python}" >> $out/nix-support/depends
   '';
 
   dontStrip = true;

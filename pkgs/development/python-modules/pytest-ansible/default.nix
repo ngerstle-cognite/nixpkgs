@@ -8,9 +8,8 @@
 }:
 
 buildPythonPackage rec {
-  version = "2.0.2";
   pname = "pytest-ansible";
-  disabled = isPy3k;
+  version = "2.0.2";
 
   src = fetchPypi {
     inherit pname version;
@@ -30,11 +29,11 @@ buildPythonPackage rec {
   doCheck = false;
 
   checkPhase = ''
-    pytest tests
+    pytest
   '';
 
   meta = with stdenv.lib; {
-    homepage = http://github.com/jlaska/pytest-ansible;
+    homepage = https://github.com/jlaska/pytest-ansible;
     description = "Plugin for py.test to simplify calling ansible modules from tests or fixtures";
     license = licenses.mit;
     maintainers = [ maintainers.costrouc ];

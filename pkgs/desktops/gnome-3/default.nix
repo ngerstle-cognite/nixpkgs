@@ -3,7 +3,23 @@
 lib.makeScope pkgs.newScope (self: with self; {
   updateScript = callPackage ./update.nix { };
 
-  maintainers = with pkgs.lib.maintainers; [ lethalman jtojnar hedning ];
+  /* Remove packages of packagesToRemove from packages, based on their names
+
+     Type:
+       removePackagesByName :: [package] -> [package] -> [package]
+
+     Example:
+       removePackagesByName [ nautilus file-roller ] [ file-roller totem ]
+       => [ nautilus ]
+  */
+  removePackagesByName = packages: packagesToRemove:
+    let
+      pkgName = drv: (builtins.parseDrvName drv.name).name;
+      namesToRemove = map pkgName packagesToRemove;
+    in
+      lib.filter (x: !(builtins.elem (pkgName x) namesToRemove)) packages;
+
+  maintainers = with pkgs.lib.maintainers; [ lethalman jtojnar hedning worldofpeace ];
 
   corePackages = with gnome3; [
     pkgs.desktop-file-utils
@@ -12,7 +28,7 @@ lib.makeScope pkgs.newScope (self: with self; {
     gtk3.out # for gtk-update-icon-cache
     glib-networking gvfs dconf gnome-backgrounds gnome-control-center
     gnome-menus gnome-settings-daemon gnome-shell
-    gnome-themes-extra defaultIconTheme gnome-shell-extensions
+    gnome-themes-extra adwaita-icon-theme gnome-shell-extensions
     pkgs.hicolor-icon-theme
   ];
 
@@ -35,22 +51,11 @@ lib.makeScope pkgs.newScope (self: with self; {
     hitori gnome-taquin
   ];
 
-  inherit (pkgs) atk glib gobject-introspection gspell webkitgtk gtk3 gtkmm3
-    libgtop libgudev libhttpseverywhere librsvg libsecret gdk_pixbuf gtksourceview gtksourceviewmm gtksourceview4
-    easytag meld orca rhythmbox shotwell gnome-usage
-    clutter clutter-gst clutter-gtk cogl gtk-vnc libdazzle libgda libgit2-glib libgxps libgdata libgepub libcroco libpeas libgee geocode-glib libgweather librest libzapojit libmediaart gfbgraph gexiv2 folks totem-pl-parser gcr gsound libgnomekbd vte vte_290 vte-ng gnome-menus;
-
   libsoup = pkgs.libsoup.override { gnomeSupport = true; };
   libchamplain = pkgs.libchamplain.override { libsoup = libsoup; };
   gnome3 = self // { recurseForDerivations = false; };
-  gtk = gtk3;
-  gtkmm = gtkmm3;
-  vala = pkgs.vala_0_42;
-  gegl_0_4 = pkgs.gegl_0_4.override { inherit gtk; };
-  rest = librest;
-
-# Simplify the nixos module and gnome packages
-  defaultIconTheme = adwaita-icon-theme;
+  vala = pkgs.vala_0_44;
+  gegl_0_4 = pkgs.gegl_0_4.override { gtk = pkgs.gtk3; };
 
 # ISO installer
 # installerIso = callPackage ./installer.nix {};
@@ -79,7 +84,7 @@ lib.makeScope pkgs.newScope (self: with self; {
   gjs = callPackage ./core/gjs { };
 
   glib-networking = pkgs.glib-networking.override {
-    inherit gsettings-desktop-schemas;
+    inherit (pkgs) gsettings-desktop-schemas;
   };
 
   gnome-backgrounds = callPackage ./core/gnome-backgrounds { };
@@ -139,8 +144,6 @@ lib.makeScope pkgs.newScope (self: with self; {
   grilo = callPackage ./core/grilo { };
 
   grilo-plugins = callPackage ./core/grilo-plugins { };
-
-  gsettings-desktop-schemas = callPackage ./core/gsettings-desktop-schemas { };
 
   gucharmap = callPackage ./core/gucharmap { };
 
@@ -224,6 +227,8 @@ lib.makeScope pkgs.newScope (self: with self; {
 
   glade = callPackage ./apps/glade { };
 
+  gnome-books = callPackage ./apps/gnome-books { };
+
   gnome-boxes = callPackage ./apps/gnome-boxes { };
 
   gnome-calendar = callPackage ./apps/gnome-calendar { };
@@ -271,8 +276,6 @@ lib.makeScope pkgs.newScope (self: with self; {
   anjuta = callPackage ./devtools/anjuta { };
 
   devhelp = callPackage ./devtools/devhelp { };
-
-  gdl = callPackage ./devtools/gdl { };
 
   gnome-devel-docs = callPackage ./devtools/gnome-devel-docs { };
 
@@ -332,6 +335,8 @@ lib.makeScope pkgs.newScope (self: with self; {
 
   gnome-panel = callPackage ./misc/gnome-panel { };
 
+  gnome-screensaver = callPackage ./misc/gnome-screensaver { };
+
   gnome-tweaks = callPackage ./misc/gnome-tweaks { };
 
   gpaste = callPackage ./misc/gpaste { };
@@ -356,8 +361,8 @@ lib.makeScope pkgs.newScope (self: with self; {
 
   bijiben = gnome-notes; # added 2018-09-26
   evolution_data_server = evolution-data-server; # added 2018-02-25
-  geocode_glib = geocode-glib; # added 2018-02-25
-  glib_networking = glib-networking; # added 2018-02-25
+  geocode_glib = pkgs.geocode-glib; # added 2018-02-25
+  glib_networking = pkgs.glib-networking; # added 2018-02-25
   gnome_common = gnome-common; # added 2018-02-25
   gnome_control_center = gnome-control-center; # added 2018-02-25
   gnome_desktop = gnome-desktop; # added 2018-02-25
@@ -383,4 +388,14 @@ lib.makeScope pkgs.newScope (self: with self; {
   yelp_xsl = yelp-xsl; # added 2018-02-25
   yelp_tools = yelp-tools; # added 2018-02-25
 
+  # added 2019-02-08
+  inherit (pkgs) atk glib gobject-introspection gspell webkitgtk gtk3 gtkmm3
+      libgtop libgudev libhttpseverywhere librsvg libsecret gdk_pixbuf gtksourceview gtksourceviewmm gtksourceview4
+      easytag meld orca rhythmbox shotwell gnome-usage
+      clutter clutter-gst clutter-gtk cogl gtk-vnc libdazzle libgda libgit2-glib libgxps libgdata libgepub libcroco libpeas libgee geocode-glib libgweather librest libzapojit libmediaart gfbgraph gexiv2 folks totem-pl-parser gcr gsound libgnomekbd vte vte_290 vte-ng gnome-menus gdl;
+  inherit (pkgs) gsettings-desktop-schemas; # added 2019-04-16
+  defaultIconTheme = adwaita-icon-theme;
+  gtk = gtk3;
+  gtkmm = gtkmm3;
+  rest = librest;
 })

@@ -1,12 +1,12 @@
 { stdenv, buildPythonPackage, fetchPypi, python, pytest, glibcLocales }:
 
 buildPythonPackage rec {
-  version = "3.5.6";
+  version = "3.5.8";
   pname = "pyfakefs";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "efe9c318b2a37ae498a555889684c30ccb6a1b06bd391cb3baf0eb5ba68e9062";
+    sha256 = "8cd2270d65d3316dd4dc6bb83242df2e0990d27605209bc16e8041bcc0956961";
   };
 
   postPatch = ''
@@ -30,7 +30,7 @@ buildPythonPackage rec {
     export LC_ALL=en_US.UTF-8
     ${python.interpreter} -m pyfakefs.tests.all_tests
     ${python.interpreter} -m pyfakefs.tests.all_tests_without_extra_packages
-    ${python.interpreter} -m pytest pyfakefs/tests/pytest/pytest_plugin_test.py
+    ${python.interpreter} -m pytest pyfakefs/pytest_tests/pytest_plugin_test.py
   '';
 
   meta = with stdenv.lib; {
