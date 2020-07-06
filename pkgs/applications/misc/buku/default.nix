@@ -1,14 +1,14 @@
-{ stdenv, python3, fetchFromGitHub, fetchpatch }:
+{ stdenv, python3, fetchFromGitHub }:
 
 with python3.pkgs; buildPythonApplication rec {
-  version = "4.1";
+  version = "4.4";
   pname = "buku";
 
   src = fetchFromGitHub {
     owner = "jarun";
     repo = "buku";
     rev = "v${version}";
-    sha256 = "166l1fmpqn4hys4l0ssc4yd590mmav1w62vm9l5ijhjhmlnrzfax";
+    sha256 = "10r5f1n0vcxxmqqqsgmlvibwg1xffijrr2id6r140rgiyhprz556";
   };
 
   checkInputs = [
@@ -18,6 +18,7 @@ with python3.pkgs; buildPythonApplication rec {
     pylint
     flake8
     pyyaml
+    mypy-extensions
   ];
 
   propagatedBuildInputs = [
@@ -26,15 +27,18 @@ with python3.pkgs; buildPythonApplication rec {
     requests
     urllib3
     flask
+    flask-admin
     flask-api
     flask-bootstrap
     flask-paginate
+    flask-reverse-proxy-fix
     flask_wtf
     arrow
     werkzeug
     click
     html5lib
     vcrpy
+    toml
   ];
 
   postPatch = ''
@@ -53,6 +57,8 @@ with python3.pkgs; buildPythonApplication rec {
       --replace "@pytest.mark.slowtest" "@unittest.skip('skipping')" \
       --replace "self.assertEqual(shorturl, 'http://tny.im/yt')" "" \
       --replace "self.assertEqual(url, 'https://www.google.com')" ""
+    substituteInPlace setup.py \
+      --replace mypy-extensions==0.4.1 mypy-extensions>=0.4.1
   '';
 
   postInstall = ''
@@ -66,7 +72,7 @@ with python3.pkgs; buildPythonApplication rec {
 
   meta = with stdenv.lib; {
     description = "Private cmdline bookmark manager";
-    homepage = https://github.com/jarun/Buku;
+    homepage = "https://github.com/jarun/Buku";
     license = licenses.gpl3;
     platforms = platforms.linux;
     maintainers = with maintainers; [ matthiasbeyer infinisil ];

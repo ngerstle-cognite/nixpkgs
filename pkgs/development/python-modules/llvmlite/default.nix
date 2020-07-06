@@ -6,17 +6,18 @@
 , pythonOlder
 , isPyPy
 , enum34
+, isPy3k
 }:
 
 buildPythonPackage rec {
   pname = "llvmlite";
-  version = "0.25.0";
+  version = "0.32.1";
 
-  disabled = isPyPy;
+  disabled = isPyPy || !isPy3k;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "fd64def9a51dd7dc61913a7a08eeba5b9785522740bec5a7c5995b2a90525025";
+    sha256 = "41262a47b8cbba5a09203b15b65fbdf11192f92aa226c81e99115acdee8f3b8d";
   };
 
   nativeBuildInputs = [ llvm ];
@@ -43,7 +44,7 @@ buildPythonPackage rec {
 
   meta = {
     description = "A lightweight LLVM python binding for writing JIT compilers";
-    homepage = http://llvmlite.pydata.org/;
+    homepage = "http://llvmlite.pydata.org/";
     license = stdenv.lib.licenses.bsd2;
     maintainers = with stdenv.lib.maintainers; [ fridh ];
   };

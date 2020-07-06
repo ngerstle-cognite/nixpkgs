@@ -23,24 +23,81 @@ let
 
   cfg = config.virtualisation;
 
-  qemuGraphics = lib.optionalString (!cfg.graphics) "-nographic";
-
   consoles = lib.concatMapStringsSep " " (c: "console=${c}") cfg.qemu.consoles;
 
-  # XXX: This is very ugly and in the future we really should use attribute
-  # sets to build ALL of the QEMU flags instead of this mixed mess of Nix
-  # expressions and shell script stuff.
-  mkDiskIfaceDriveFlag = idx: driveArgs: let
-    inherit (cfg.qemu) diskInterface;
-    # The drive identifier created by incrementing the index by one using the
-    # shell.
-    drvId = "drive$((${idx} + 1))";
-    # NOTE: DO NOT shell escape, because this may contain shell variables.
-    commonArgs = "index=${idx},id=${drvId},${driveArgs}";
-    isSCSI = diskInterface == "scsi";
-    devArgs = "${diskInterface}-hd,drive=${drvId}";
-    args = "-drive ${commonArgs},if=none -device lsi53c895a -device ${devArgs}";
-  in if isSCSI then args else "-drive ${commonArgs},if=${diskInterface}";
+  driveOpts = { ... }: {
+
+    options = {
+
+      file = mkOption {
+        type = types.str;
+        description = "The file image used for this drive.";
+      };
+
+      driveExtraOpts = mkOption {
+        type = types.attrsOf types.str;
+        default = {};
+        description = "Extra options passed to drive flag.";
+      };
+
+      deviceExtraOpts = mkOption {
+        type = types.attrsOf types.str;
+        default = {};
+        description = "Extra options passed to device flag.";
+      };
+
+      name = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description =
+          "A name for the drive. Must be unique in the drives list. Not passed to qemu.";
+      };
+
+    };
+
+  };
+
+  driveCmdline = idx: { file, driveExtraOpts, deviceExtraOpts, ... }:
+    let
+      drvId = "drive${toString idx}";
+      mkKeyValue = generators.mkKeyValueDefault {} "=";
+      mkOpts = opts: concatStringsSep "," (mapAttrsToList mkKeyValue opts);
+      driveOpts = mkOpts (driveExtraOpts // {
+        index = idx;
+        id = drvId;
+        "if" = "none";
+        inherit file;
+      });
+      deviceOpts = mkOpts (deviceExtraOpts // {
+        drive = drvId;
+      });
+      device =
+        if cfg.qemu.diskInterface == "scsi" then
+          "-device lsi53c895a -device scsi-hd,${deviceOpts}"
+        else
+          "-device virtio-blk-pci,${deviceOpts}";
+    in
+      "-drive ${driveOpts} ${device}";
+
+  drivesCmdLine = drives: concatStringsSep " " (imap1 driveCmdline drives);
+
+  # Creates a device name from a 1-based a numerical index, e.g.
+  # * `driveDeviceName 1` -> `/dev/vda`
+  # * `driveDeviceName 2` -> `/dev/vdb`
+  driveDeviceName = idx:
+    let letter = elemAt lowerChars (idx - 1);
+    in if cfg.qemu.diskInterface == "scsi" then
+      "/dev/sd${letter}"
+    else
+      "/dev/vd${letter}";
+
+  lookupDriveDeviceName = driveName: driveList:
+    (findSingle (drive: drive.name == driveName)
+      (throw "Drive ${driveName} not found")
+      (throw "Multiple drives named ${driveName}") driveList).device;
+
+  addDeviceNames =
+    imap1 (idx: drive: drive // { device = driveDeviceName idx; });
 
   # Shell script to start the VM.
   startVM =
@@ -77,13 +134,11 @@ let
       ''}
 
       cd $TMPDIR
-      idx=2
-      extraDisks=""
+      idx=0
       ${flip concatMapStrings cfg.emptyDiskImages (size: ''
         if ! test -e "empty$idx.qcow2"; then
             ${qemu}/bin/qemu-img create -f qcow2 "empty$idx.qcow2" "${toString size}M"
         fi
-        extraDisks="$extraDisks ${mkDiskIfaceDriveFlag "$idx" "file=$(pwd)/empty$idx.qcow2,werror=report"}"
         idx=$((idx + 1))
       '')}
 
@@ -97,21 +152,7 @@ let
           -virtfs local,path=/nix/store,security_model=none,mount_tag=store \
           -virtfs local,path=$TMPDIR/xchg,security_model=none,mount_tag=xchg \
           -virtfs local,path=''${SHARED_DIR:-$TMPDIR/xchg},security_model=none,mount_tag=shared \
-          ${if cfg.useBootLoader then ''
-            ${mkDiskIfaceDriveFlag "0" "file=$NIX_DISK_IMAGE,cache=writeback,werror=report"} \
-            ${mkDiskIfaceDriveFlag "1" "file=$TMPDIR/disk.img,media=disk"} \
-            ${if cfg.useEFIBoot then ''
-              -pflash $TMPDIR/bios.bin \
-            '' else ''
-            ''}
-          '' else ''
-            ${mkDiskIfaceDriveFlag "0" "file=$NIX_DISK_IMAGE,cache=writeback,werror=report"} \
-            -kernel ${config.system.build.toplevel}/kernel \
-            -initrd ${config.system.build.toplevel}/initrd \
-            -append "$(cat ${config.system.build.toplevel}/kernel-params) init=${config.system.build.toplevel}/init regInfo=${regInfo}/registration ${consoles} $QEMU_KERNEL_PARAMS" \
-          ''} \
-          $extraDisks \
-          ${qemuGraphics} \
+          ${drivesCmdLine config.virtualisation.qemu.drives} \
           ${toString config.virtualisation.qemu.options} \
           $QEMU_OPTS \
           "$@"
@@ -173,9 +214,18 @@ let
           mkdir /boot/grub
           echo '(hd0) /dev/vda' > /boot/grub/device.map
 
-          # Install GRUB and generate the GRUB boot menu.
-          touch /etc/NIXOS
+          # This is needed for systemd-boot to find ESP, and udev is not available here to create this
+          mkdir -p /dev/block
+          ln -s /dev/vda2 /dev/block/254:2
+
+          # Set up system profile (normally done by nixos-rebuild / nix-env --set)
           mkdir -p /nix/var/nix/profiles
+          ln -s ${config.system.build.toplevel} /nix/var/nix/profiles/system-1-link
+          ln -s /nix/var/nix/profiles/system-1-link /nix/var/nix/profiles/system
+
+          # Install bootloader
+          touch /etc/NIXOS
+          export NIXOS_INSTALL_BOOTLOADER=1
           ${config.system.build.toplevel}/bin/switch-to-configuration boot
 
           umount /boot
@@ -367,6 +417,13 @@ in
           '';
         };
 
+      drives =
+        mkOption {
+          type = types.listOf (types.submodule driveOpts);
+          description = "Drives passed to qemu.";
+          apply = addDeviceNames;
+        };
+
       diskInterface =
         mkOption {
           default = "virtio";
@@ -407,6 +464,18 @@ in
             If enabled, the virtual machine will provide a EFI boot
             manager.
             useEFIBoot is ignored if useBootLoader == false.
+          '';
+      };
+
+    virtualisation.bios =
+      mkOption {
+        default = null;
+        type = types.nullOr types.package;
+        description =
+          ''
+            An alternate BIOS (such as <package>qboot</package>) with which to start the VM.
+            Should contain a file named <literal>bios.bin</literal>.
+            If <literal>null</literal>, QEMU's builtin SeaBIOS will be used.
           '';
       };
 
@@ -469,15 +538,53 @@ in
       optional cfg.writableStore "overlay"
       ++ optional (cfg.qemu.diskInterface == "scsi") "sym53c8xx";
 
-    virtualisation.bootDevice =
-      mkDefault (if cfg.qemu.diskInterface == "scsi" then "/dev/sda" else "/dev/vda");
+    virtualisation.bootDevice = mkDefault (driveDeviceName 1);
 
     virtualisation.pathsInNixDB = [ config.system.build.toplevel ];
 
     # FIXME: Consolidate this one day.
     virtualisation.qemu.options = mkMerge [
-      (mkIf (pkgs.stdenv.isi686 || pkgs.stdenv.isx86_64) [ "-vga std" "-usb" "-device usb-tablet,bus=usb-bus.0" ])
-      (mkIf (pkgs.stdenv.isAarch32 || pkgs.stdenv.isAarch64) [ "-device virtio-gpu-pci" "-device usb-ehci,id=usb0" "-device usb-kbd" "-device usb-tablet" ])
+      (mkIf (pkgs.stdenv.isi686 || pkgs.stdenv.isx86_64) [
+        "-usb" "-device usb-tablet,bus=usb-bus.0"
+      ])
+      (mkIf (pkgs.stdenv.isAarch32 || pkgs.stdenv.isAarch64) [
+        "-device virtio-gpu-pci" "-device usb-ehci,id=usb0" "-device usb-kbd" "-device usb-tablet"
+      ])
+      (mkIf (!cfg.useBootLoader) [
+        "-kernel ${config.system.build.toplevel}/kernel"
+        "-initrd ${config.system.build.toplevel}/initrd"
+        ''-append "$(cat ${config.system.build.toplevel}/kernel-params) init=${config.system.build.toplevel}/init regInfo=${regInfo}/registration ${consoles} $QEMU_KERNEL_PARAMS"''
+      ])
+      (mkIf cfg.useEFIBoot [
+        "-pflash $TMPDIR/bios.bin"
+      ])
+      (mkIf (cfg.bios != null) [
+        "-bios ${cfg.bios}/bios.bin"
+      ])
+      (mkIf (!cfg.graphics) [
+        "-nographic"
+      ])
+    ];
+
+    virtualisation.qemu.drives = mkMerge [
+      [{
+        name = "root";
+        file = "$NIX_DISK_IMAGE";
+        driveExtraOpts.cache = "writeback";
+        driveExtraOpts.werror = "report";
+      }]
+      (mkIf cfg.useBootLoader [
+        {
+          name = "boot";
+          file = "$TMPDIR/disk.img";
+          driveExtraOpts.media = "disk";
+          deviceExtraOpts.bootindex = "1";
+        }
+      ])
+      (imap0 (idx: _: {
+        file = "$(pwd)/empty${toString idx}.qcow2";
+        driveExtraOpts.werror = "report";
+      }) cfg.emptyDiskImages)
     ];
 
     # Mount the host filesystem via 9P, and bind-mount the Nix store
@@ -504,7 +611,7 @@ in
         "/tmp/xchg" =
           { device = "xchg";
             fsType = "9p";
-            options = [ "trans=virtio" "version=9p2000.L" "cache=loose" ];
+            options = [ "trans=virtio" "version=9p2000.L" ];
             neededForBoot = true;
           };
         "/tmp/shared" =
@@ -521,7 +628,7 @@ in
           };
       } // optionalAttrs cfg.useBootLoader
       { "/boot" =
-          { device = "/dev/vdb2";
+          { device = "${lookupDriveDeviceName "boot" cfg.qemu.drives}2";
             fsType = "vfat";
             options = [ "ro" ];
             noCheck = true; # fsck fails on a r/o filesystem
@@ -557,7 +664,7 @@ in
 
     # Wireless won't work in the VM.
     networking.wireless.enable = mkVMOverride false;
-    networking.connman.enable = mkVMOverride false;
+    services.connman.enable = mkVMOverride false;
 
     # Speed up booting by not waiting for ARP.
     networking.dhcpcd.extraConfig = "noarp";

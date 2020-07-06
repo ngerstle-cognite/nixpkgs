@@ -1,12 +1,24 @@
-{ stdenv, fetchurl, makeWrapper, electron_3, dpkg, gtk3, glib, gsettings-desktop-schemas, wrapGAppsHook }:
+{ stdenv
+, lib
+, fetchurl
+, makeWrapper
+, electron_8
+, dpkg
+, gtk3
+, glib
+, gsettings-desktop-schemas
+, wrapGAppsHook
+, withPandoc ? false
+, pandoc
+}:
 
 stdenv.mkDerivation rec {
   pname = "typora";
-  version = "0.9.70";
+  version = "0.9.89";
 
   src = fetchurl {
     url = "https://www.typora.io/linux/typora_${version}_amd64.deb";
-    sha256 = "08bgllbvgrpdkk9bryj4s16n274ps4igwrzdvsdbyw8wpp44vcy2";
+    sha256 = "0gk8j13z1ymad34zzcy4vqwyjgd5khgyw5xjj9rbzm5v537kqmx6";
   };
 
   nativeBuildInputs = [
@@ -21,7 +33,8 @@ stdenv.mkDerivation rec {
     gtk3
   ];
 
-  unpackPhase = "dpkg-deb -x $src .";
+  # The deb contains setuid permission on `chrome-sandbox`, which will actually not get installed.
+  unpackPhase = "dpkg-deb --fsys-tarfile $src | tar -x --no-same-permissions --no-same-owner";
 
   dontWrapGApps = true;
 
@@ -39,17 +52,18 @@ stdenv.mkDerivation rec {
   '';
 
   postFixup = ''
-    makeWrapper ${electron_3}/bin/electron $out/bin/typora \
+    makeWrapper ${electron_8}/bin/electron $out/bin/typora \
       --add-flags $out/share/typora \
       "''${gappsWrapperArgs[@]}" \
-      --prefix LD_LIBRARY_PATH : "${stdenv.lib.makeLibraryPath [ stdenv.cc.cc ]}"
+      ${lib.optionalString withPandoc ''--prefix PATH : "${lib.makeBinPath [ pandoc ]}"''} \
+      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ stdenv.cc.cc ]}"
   '';
 
-  meta = with stdenv.lib; {
+  meta = with lib; {
     description = "A minimal Markdown reading & writing app";
-    homepage = https://typora.io;
+    homepage = "https://typora.io";
     license = licenses.unfree;
-    maintainers = with maintainers; [ jensbin worldofpeace ];
-    inherit (electron_3.meta) platforms;
+    maintainers = with maintainers; [ jensbin ];
+    platforms = [ "x86_64-linux"];
   };
 }

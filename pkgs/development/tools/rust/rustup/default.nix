@@ -1,38 +1,45 @@
 { stdenv, lib, runCommand, patchelf
 , fetchFromGitHub, rustPlatform
-, pkgconfig, curl, Security, CoreServices }:
+, pkgconfig, curl, zlib, Security, CoreServices }:
 
 rustPlatform.buildRustPackage rec {
   pname = "rustup";
-  version = "1.18.2";
+  version = "1.21.1";
 
   src = fetchFromGitHub {
     owner = "rust-lang";
-    repo = "rustup.rs";
+    repo = "rustup";
     rev = version;
-    sha256 = "0lyn06vzp5406sjng7msifigkal2lafppqjbdnigx8yvgxqgd06f";
+    sha256 = "0d7l3j8js16zgdx37kykavr343v65vchldz88j38jjyc43pcm2pg";
   };
 
-  cargoSha256 = "0yxjy1kls80fcpwskklmihkqva16s6mawa8rdxc3zz8g588am03c";
+  cargoSha256 = "1y13kfski36rfvqkp3mxxn12aidp339j7rigv49msyr004ac5y8s";
 
   nativeBuildInputs = [ pkgconfig ];
 
   buildInputs = [
-    curl
+    curl zlib
   ] ++ stdenv.lib.optionals stdenv.isDarwin [ CoreServices Security ];
 
   cargoBuildFlags = [ "--features no-self-update" ];
 
   patches = lib.optionals stdenv.isLinux [
-    (runCommand "0001-dynamically-patchelf-binaries.patch" { CC=stdenv.cc; patchelf = patchelf; } ''
+    (let
+      libPath = lib.makeLibraryPath [
+        zlib # libz.so.1
+      ];
+    in
+      (runCommand "0001-dynamically-patchelf-binaries.patch" { CC=stdenv.cc; patchelf = patchelf; libPath = "$ORIGIN/../lib:${libPath}"; } ''
        export dynamicLinker=$(cat $CC/nix-support/dynamic-linker)
        substitute ${./0001-dynamically-patchelf-binaries.patch} $out \
          --subst-var patchelf \
-         --subst-var dynamicLinker
+         --subst-var dynamicLinker \
+         --subst-var libPath
     '')
+    )
   ];
 
-  doCheck = !stdenv.isAarch64;
+  doCheck = !stdenv.isAarch64 && !stdenv.isDarwin;
 
   postInstall = ''
     pushd $out/bin
@@ -63,8 +70,9 @@ rustPlatform.buildRustPackage rec {
 
   meta = with stdenv.lib; {
     description = "The Rust toolchain installer";
-    homepage = https://www.rustup.rs/;
+    homepage = "https://www.rustup.rs/";
     license = with licenses; [ asl20 /* or */ mit ];
     maintainers = [ maintainers.mic92 ];
+    platforms = platforms.all;
   };
 }

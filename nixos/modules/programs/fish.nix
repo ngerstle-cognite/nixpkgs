@@ -10,7 +10,7 @@ let
 
   fishAliases = concatStringsSep "\n" (
     mapAttrsFlatten (k: v: "alias ${k} ${escapeShellArg v}")
-      (filterAttrs (k: v: !isNull v) cfg.shellAliases)
+      (filterAttrs (k: v: v != null) cfg.shellAliases)
   );
 
 in
@@ -102,6 +102,9 @@ in
 
     programs.fish.shellAliases = mapAttrs (name: mkDefault) cfge.shellAliases;
 
+    # Required for man completions
+    documentation.man.generateCaches = true;
+
     environment.etc."fish/foreign-env/shellInit".text = cfge.shellInit;
     environment.etc."fish/foreign-env/loginShellInit".text = cfge.loginShellInit;
     environment.etc."fish/foreign-env/interactiveShellInit".text = cfge.interactiveShellInit;
@@ -177,6 +180,10 @@ in
         set -l prev (string join0 $fish_complete_path | string match --regex "^.*?(?=\x00[^\x00]*generated_completions.*)" | string split0 | string match -er ".")
         set -l post (string join0 $fish_complete_path | string match --regex "[^\x00]*generated_completions.*" | string split0 | string match -er ".")
         set fish_complete_path $prev "/etc/fish/generated_completions" $post
+      end
+      # prevent fish from generating completions on first run
+      if not test -d $__fish_user_data_dir/generated_completions
+        ${pkgs.coreutils}/bin/mkdir $__fish_user_data_dir/generated_completions
       end
     '';
 

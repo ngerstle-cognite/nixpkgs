@@ -1,25 +1,26 @@
-{ fetchPypi, buildPythonPackage, lib, six, singledispatch, isPy3k, fetchpatch }:
+{ fetchPypi, buildPythonPackage, lib, six, singledispatch, isPy3k
+, click
+, joblib
+, regex
+, tqdm
+}:
 
 buildPythonPackage rec {
-  version = "3.4";
+  version = "3.5";
   pname = "nltk";
 
   src = fetchPypi {
     inherit pname version;
     extension = "zip";
-    sha256 = "286f6797204ffdb52525a1d21ec0a221ec68b8e3fa4f2d25f412ac8e63c70e8d";
+    sha256 = "845365449cd8c5f9731f7cb9f8bd6fd0767553b9d53af9eb1b3abf7700936b35";
   };
 
-  propagatedBuildInputs = [ six ] ++ lib.optional (!isPy3k) singledispatch;
-
-  # TODO: remove patch during update to new version
-  patches = [
-    (fetchpatch {
-      url = https://github.com/nltk/nltk/commit/3966111cbf2f35fb86082b2f12acd90d75e9b8bb.patch;
-      includes = [ "setup.py" ];
-      sha256 = "1sxafnvf6nzv6d996xc1rys06x62s36swgpfqhsyh6l1lj7y38jw";
-    })
-  ];
+  propagatedBuildInputs = [
+    click
+    joblib
+    regex
+    tqdm
+  ] ++ lib.optional (!isPy3k) singledispatch;
 
   # Tests require some data, the downloading of which is impure. It would
   # probably make sense to make the data another derivation, but then feeding
@@ -31,7 +32,7 @@ buildPythonPackage rec {
 
   meta = {
     description = "Natural Language Processing ToolKit";
-    homepage = http://nltk.org/;
+    homepage = "http://nltk.org/";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ lheckemann ];
   };

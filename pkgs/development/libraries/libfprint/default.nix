@@ -1,27 +1,55 @@
-{ stdenv, fetchurl, pkgconfig, meson, ninja, libusb, pixman, glib, nss, gtk3
-, coreutils, gtk-doc, docbook_xsl, docbook_xml_dtd_43 }:
+{ stdenv
+, fetchFromGitLab
+, pkgconfig
+, meson
+, ninja
+, gusb
+, pixman
+, glib
+, nss
+, gobject-introspection
+, coreutils
+, gtk-doc
+, docbook_xsl
+, docbook_xml_dtd_43
+}:
 
 stdenv.mkDerivation rec {
-  name = "libfprint-${version}";
-  version = "0.99.0";
+  pname = "libfprint";
+  version = "1.90.2";
+  outputs = [ "out" "devdoc" ];
 
-  src = fetchurl {
-    url = "https://gitlab.freedesktop.org/libfprint/libfprint/uploads/82ba3cef5bdf72997df711eacdb13c0f/libfprint-${version}.tar.xz";
-    sha256 = "16r4nl40y0jri57jiqmdz4s87byblx22lbhyvqpljd6mqm5rg187";
+  src = fetchFromGitLab {
+    domain = "gitlab.freedesktop.org";
+    owner = "libfprint";
+    repo = pname;
+    rev = "v${version}";
+    sha256 = "0g890y49anqd7yfz86iyvywxgbfmfmj6813fy58m5n8jain7iy1b";
   };
 
-  buildInputs = [ libusb pixman glib nss gtk3 ];
-  nativeBuildInputs = [ pkgconfig meson ninja gtk-doc docbook_xsl docbook_xml_dtd_43 ];
+  nativeBuildInputs = [
+    pkgconfig
+    meson
+    ninja
+    gtk-doc
+    docbook_xsl
+    docbook_xml_dtd_43
+    gobject-introspection
+  ];
 
-  mesonFlags = [ "-Dudev_rules_dir=lib/udev/rules.d" "-Dx11-examples=false" ];
+  buildInputs = [
+    gusb
+    pixman
+    glib
+    nss
+  ];
 
-  preConfigure = ''
-    substituteInPlace libfprint/meson.build \
-      --replace /bin/echo ${coreutils}/bin/echo
-  '';
+  mesonFlags = [
+    "-Dudev_rules_dir=${placeholder "out"}/lib/udev/rules.d"
+  ];
 
   meta = with stdenv.lib; {
-    homepage = https://fprint.freedesktop.org/;
+    homepage = "https://fprint.freedesktop.org/";
     description = "A library designed to make it easy to add support for consumer fingerprint readers";
     license = licenses.lgpl21;
     platforms = platforms.linux;

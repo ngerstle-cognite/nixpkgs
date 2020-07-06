@@ -5,14 +5,14 @@
 
 stdenv.mkDerivation rec {
 
-  name = "home-manager-${version}";
-  version = "2019-04-23";
+  pname = "home-manager";
+  version = "2020-03-17";
 
   src = fetchFromGitHub {
     owner = "rycee";
     repo = "home-manager";
-    rev = "ba0375bf06e0e0c3b2377edf913b7fddfd5a0b40";
-    sha256 = "1ksr8fw5p5ai2a02whppc0kz9b3m5363hvfjghkzkd623kfh9073";
+    rev = "5969551a5cc52f9470b5ff5ca01327bf4bda82c1";
+    sha256 = "0f4kz83a1kp3ci8zi5hvp8fp34wi73arpykl4d9vlywdk6w36bnd";
   };
 
   nativeBuildInputs = [ makeWrapper ];
@@ -28,12 +28,15 @@ stdenv.mkDerivation rec {
       --subst-var-by gnused "${gnused}" \
       --subst-var-by less "${less}" \
       --subst-var-by HOME_MANAGER_PATH '${src}'
+
+    install -D -m755 home-manager/completion.bash \
+      "$out/share/bash-completion/completions/home-manager"
   '';
 
   meta = with stdenv.lib; {
     description = "A user environment configurator";
-    maintainers = with maintainers; [ rycee ];
-    platforms = platforms.linux;
+    homepage = "https://rycee.gitlab.io/home-manager/";
+    platforms = platforms.unix;
     license = licenses.mit;
   };
 

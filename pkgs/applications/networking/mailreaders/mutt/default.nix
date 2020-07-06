@@ -26,12 +26,12 @@ assert gpgmeSupport -> gpgme      != null && openssl != null;
 with stdenv.lib;
 
 stdenv.mkDerivation rec {
-  name = "mutt-${version}";
-  version = "1.11.4";
+  pname = "mutt";
+  version = "1.14.5";
 
   src = fetchurl {
-    url = "http://ftp.mutt.org/pub/mutt/${name}.tar.gz";
-    sha256 = "0098pr4anmq2a0id8wfi2vci3cgcfwf9k4q411w22xn8lrz3aldn";
+    url = "http://ftp.mutt.org/pub/mutt/${pname}-${version}.tar.gz";
+    sha256 = "0p1xiqzmkqlzy5yi4l0dh0lacdq300zdj48zk0fir8j1pp512sri";
   };
 
   patches = optional smimeSupport (fetchpatch {
@@ -88,9 +88,9 @@ stdenv.mkDerivation rec {
 
   meta = {
     description = "A small but very powerful text-based mail client";
-    homepage = http://www.mutt.org;
+    homepage = "http://www.mutt.org";
     license = licenses.gpl2Plus;
     platforms = platforms.unix;
-    maintainers = with maintainers; [ the-kenny rnhmjoj ];
+    maintainers = with maintainers; [ rnhmjoj ];
   };
 }

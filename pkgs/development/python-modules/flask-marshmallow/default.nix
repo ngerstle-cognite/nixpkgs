@@ -4,7 +4,7 @@
 
 buildPythonPackage rec {
   pname = "flask-marshmallow";
-  version = "0.10.0";
+  version = "0.12.0";
 
   meta = {
     homepage = "https://github.com/marshmallow-code/flask-marshmallow";
@@ -14,7 +14,7 @@ buildPythonPackage rec {
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1xvk289628l3pp56gidwhmd54cgdczpsxhxfw0bfcsd120k1svfv";
+    sha256 = "6e6aec171b8e092e0eafaf035ff5b8637bf3a58ab46f568c4c1bab02f2a3c196";
   };
 
   propagatedBuildInputs = [ flask marshmallow ];

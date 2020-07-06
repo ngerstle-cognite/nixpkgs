@@ -3,52 +3,45 @@
 , fetchPypi
 , pythonOlder
 , pytest
-, preshed
-, ftfy
-, numpy
-, murmurhash
-, plac
-, ujson
-, dill
-, requests
-, thinc
-, regex
+, blis
+, catalogue
 , cymem
+, jsonschema
+, murmurhash
+, numpy
 , pathlib
-, msgpack-python
-, msgpack-numpy
+, plac
+, preshed
+, requests
+, setuptools
+, srsly
+, thinc
+, wasabi
 }:
 
 buildPythonPackage rec {
   pname = "spacy";
-  version = "2.0.18";
+  version = "2.3.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0mybdms7c40jvk8ak180n65anjiyg4c8gkaqwkzicrd1mxq3ngqj";
+    sha256 = "0nri437dyapiq5gx8lbmjdfvqw2cnw3di13kp44rzr17bm5yh2jv";
   };
 
-  prePatch = ''
-    substituteInPlace setup.py \
-      --replace "regex==" "regex>=" \
-      --replace "plac<1.0.0,>=0.9.6" "plac>=0.9.6" \
-      --replace "wheel>=0.32.0,<0.33.0" "wheel>=0.32.0"
-  '';
-
   propagatedBuildInputs = [
-   numpy
-   murmurhash
+   blis
+   catalogue
    cymem
-   preshed
-   thinc
+   jsonschema
+   murmurhash
+   numpy
    plac
-   ujson
-   dill
+   preshed
    requests
-   regex
-   ftfy
-   msgpack-python
-   msgpack-numpy
+   setuptools
+   srsly
+   thinc
+   wasabi
   ] ++ lib.optional (pythonOlder "3.4") pathlib;
 
   checkInputs = [
@@ -60,10 +53,20 @@ buildPythonPackage rec {
   #   ${python.interpreter} -m pytest spacy/tests --vectors --models --slow
   # '';
 
+  postPatch = ''
+    substituteInPlace setup.cfg \
+      --replace "catalogue>=0.0.7,<1.1.0" "catalogue>=0.0.7,<3.0" \
+      --replace "plac>=0.9.6,<1.2.0" "plac>=0.9.6,<2.0" \
+      --replace "srsly>=1.0.2,<1.1.0" "srsly>=1.0.2,<3.0" \
+      --replace "thinc==7.4.1" "thinc>=7.4.1,<8"
+  '';
+
+  pythonImportsCheck = [ "spacy" ];
+
   meta = with lib; {
     description = "Industrial-strength Natural Language Processing (NLP) with Python and Cython";
-    homepage = https://github.com/explosion/spaCy;
+    homepage = "https://github.com/explosion/spaCy";
     license = licenses.mit;
-    maintainers = with maintainers; [ sdll ];
-    };
+    maintainers = with maintainers; [ danieldk sdll ];
+  };
 }

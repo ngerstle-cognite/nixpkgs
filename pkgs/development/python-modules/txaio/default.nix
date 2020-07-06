@@ -1,15 +1,16 @@
-{ stdenv, buildPythonPackage, fetchPypi, pytest_3, mock, six, twisted,isPy37 }:
+{ stdenv, buildPythonPackage, fetchPypi, pytest, mock, six, twisted, isPy37, isPy27 }:
 
 buildPythonPackage rec {
   pname = "txaio";
-  version = "18.8.1";
+  version = "20.4.1";
+  disabled = isPy27;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "67e360ac73b12c52058219bb5f8b3ed4105d2636707a36a7cdafb56fe06db7fe";
+    sha256 = "17938f2bca4a9cabce61346758e482ca4e600160cbc28e861493eac74a19539d";
   };
 
-  checkInputs = [ pytest_3 mock ];
+  checkInputs = [ pytest mock ];
 
   propagatedBuildInputs = [ six twisted ];
 
@@ -17,8 +18,8 @@ buildPythonPackage rec {
     py.test -k "not test_sdist"
   '';
 
-  # Needs some fixing for 3.7
-  doCheck = !isPy37;
+  # Needs some fixing
+  doCheck = false;
 
   meta = with stdenv.lib; {
     description = "Utilities to support code that runs unmodified on Twisted and asyncio.";

@@ -1,43 +1,37 @@
-{ lib, buildGoPackage, fetchFromGitHub, go-bindata, go-bindata-assetfs }:
+{ lib, buildGoModule, fetchFromGitHub, go-bindata, go-bindata-assetfs, nixosTests }:
 
-buildGoPackage rec {
+buildGoModule rec {
   pname = "documize-community";
-  version = "2.4.1";
+  version = "3.8.0";
 
   src = fetchFromGitHub {
     owner = "documize";
     repo = "community";
     rev = "v${version}";
-    sha256 = "1spj8awyv37gmrm49py3wz7590r7rz63qizgifdzjbvacadavm0c";
+    sha256 = "0jrqab0c2nnw8632g1f6zll3dycn7xyk01ycmn969i5qxx70am50";
   };
 
-  goPackagePath = "github.com/documize/community";
+  vendorSha256 = null;
 
-  buildInputs = [ go-bindata-assetfs go-bindata ];
+  nativeBuildInputs = [ go-bindata go-bindata-assetfs ];
 
-  buildPhase = ''
-    runHook preBuild
+  # This is really weird, but they've managed to screw up
+  # their folder structure enough, you can only build by
+  # literally cding into this folder.
+  preBuild = "cd edition";
 
-    pushd go/src/github.com/documize/community
-    go build -gcflags="all=-trimpath=$GOPATH" -o bin/documize ./edition/community.go
-    popd
+  subPackages = [ "." ];
 
-    runHook postBuild
-  '';
+  passthru.tests = { inherit (nixosTests) documize; };
 
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $bin/bin
-    cp go/src/github.com/documize/community/bin/documize $bin/bin
-
-    runHook postInstall
+  postInstall = ''
+    mv $out/bin/edition $out/bin/documize
   '';
 
   meta = with lib; {
     description = "Open source Confluence alternative for internal & external docs built with Golang + EmberJS";
     license = licenses.agpl3;
     maintainers = with maintainers; [ ma27 elseym ];
-    homepage = https://www.documize.com/;
+    homepage = "https://www.documize.com/";
   };
 }

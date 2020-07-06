@@ -1,47 +1,70 @@
-{ stdenv, fetchFromGitHub, pkgconfig
-, buildGoPackage, gpgme, lvm2, btrfs-progs, libseccomp
+{ stdenv
+, fetchFromGitHub
+, pkg-config
+, installShellFiles
+, buildGoModule
+, gpgme
+, lvm2
+, btrfs-progs
+, libapparmor
+, libseccomp
+, libselinux
+, systemd
 , go-md2man
+, nixosTests
 }:
 
-buildGoPackage rec {
-  name = "podman-${version}";
-  version = "1.2.0";
+buildGoModule rec {
+  pname = "podman";
+  version = "2.0.1";
 
   src = fetchFromGitHub {
     owner = "containers";
     repo = "libpod";
     rev = "v${version}";
-    sha256 = "1nlll4q62w3i897wraj18pdi5cc91b8gmp360pzyqzzjdm9ag7v6";
+    sha256 = "11avj4q3xh7qbcbs8h4jis0bdfkvvh193sflwiz8hcp41qjvinz4";
   };
 
-  goPackagePath = "github.com/containers/libpod";
+  vendorSha256 = null;
 
-  outputs = [ "bin" "out" "man" ];
+  outputs = [ "out" "man" ];
 
-  # Optimizations break compilation of libseccomp c bindings
-  hardeningDisable = [ "fortify" ];
-  nativeBuildInputs = [ pkgconfig go-md2man ];
+  nativeBuildInputs = [ pkg-config go-md2man installShellFiles ];
 
-  buildInputs = [
-    btrfs-progs libseccomp gpgme lvm2
+  buildInputs = stdenv.lib.optionals stdenv.isLinux [
+    btrfs-progs
+    gpgme
+    libapparmor
+    libseccomp
+    libselinux
+    lvm2
+    systemd
   ];
 
   buildPhase = ''
-    pushd $NIX_BUILD_TOP/go/src/${goPackagePath}
     patchShebangs .
-    make binaries docs
+    ${if stdenv.isDarwin
+      then "make podman-remote"
+      else "make podman"}
+    make docs
   '';
 
-  installPhase = ''
-    install -Dm555 bin/podman $bin/bin/podman
-    MANDIR=$man/share/man make install.man
+  installPhase = stdenv.lib.optionalString stdenv.isDarwin ''
+    mv bin/{podman-remote,podman}
+  '' + ''
+    install -Dm555 bin/podman $out/bin/podman
+    installShellCompletion --bash completions/bash/podman
+    installShellCompletion --zsh completions/zsh/_podman
+    MANDIR=$man/share/man make install.man-nobuild
   '';
+
+  passthru.tests.podman = nixosTests.podman;
 
   meta = with stdenv.lib; {
-    homepage = https://podman.io/;
+    homepage = "https://podman.io/";
     description = "A program for managing pods, containers and container images";
     license = licenses.asl20;
-    maintainers = with maintainers; [ vdemeester ];
-    platforms = platforms.linux;
+    maintainers = with maintainers; [ marsam ] ++ teams.podman.members;
+    platforms = platforms.unix;
   };
 }

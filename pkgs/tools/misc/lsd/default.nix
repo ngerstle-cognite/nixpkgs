@@ -1,31 +1,31 @@
-{ stdenv, fetchFromGitHub, rustPlatform }:
+{ stdenv
+, fetchFromGitHub
+, rustPlatform
+, installShellFiles
+}:
 
 rustPlatform.buildRustPackage rec {
   pname = "lsd";
-  version = "0.14.0";
+  version = "0.17.0";
 
   src = fetchFromGitHub {
     owner = "Peltoche";
-    repo = "lsd";
+    repo = pname;
     rev = version;
-    sha256 = "1k054c4mz0z9knfn7kvvs3305z2g2w44l0cjg4k3cax06ic1grlr";
+    sha256 = "1vyww54fl4yfvszr0dh8ym2jd9gilrccmwkvl7rbx70sfqzsgaai";
   };
 
-  cargoSha256 = "0pg4wsk2qaljrqklnl5p3iv83314wmybyxsn1prvsjsl4b64mil9";
+  cargoSha256 = "13g0p6zh2b1z005lszll098d4lv62dzsxwhl76bianzrydif61lr";
 
-  preFixup = ''
-    install -Dm644 -t $out/share/zsh/site-functions/ target/release/build/lsd-*/out/_lsd
-    install -Dm644 -t $out/share/fish/vendor_completions.d/ target/release/build/lsd-*/out/lsd.fish
-    install -Dm644 -t $out/share/bash-completion/completions/ target/release/build/lsd-*/out/lsd.bash
+  nativeBuildInputs = [ installShellFiles ];
+  postInstall = ''
+    installShellCompletion $releaseDir/build/lsd-*/out/{_lsd,lsd.{bash,fish}}
   '';
 
-  # Some tests fail, but Travis ensures a proper build
-  doCheck = false;
-
   meta = with stdenv.lib; {
-    homepage = https://github.com/Peltoche/lsd;
+    homepage = "https://github.com/Peltoche/lsd";
     description = "The next gen ls command";
     license = licenses.asl20;
-    maintainers = [ maintainers.marsam ];
+    maintainers = with maintainers; [ filalex77 marsam ];
   };
 }

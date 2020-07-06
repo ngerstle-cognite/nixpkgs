@@ -6,6 +6,14 @@ let
   cfg = config.hardware;
 in {
 
+  imports = [
+    (mkRenamedOptionModule [ "networking" "enableRT73Firmware" ] [ "hardware" "enableRedistributableFirmware" ])
+    (mkRenamedOptionModule [ "networking" "enableIntel3945ABGFirmware" ] [ "hardware" "enableRedistributableFirmware" ])
+    (mkRenamedOptionModule [ "networking" "enableIntel2100BGFirmware" ] [ "hardware" "enableRedistributableFirmware" ])
+    (mkRenamedOptionModule [ "networking" "enableRalinkFirmware" ] [ "hardware" "enableRedistributableFirmware" ])
+    (mkRenamedOptionModule [ "networking" "enableRTL8192cFirmware" ] [ "hardware" "enableRedistributableFirmware" ])
+  ];
+
   ###### interface
 
   options = {
@@ -43,6 +51,7 @@ in {
         rtlwifi_new-firmware
         zd1211fw
         alsa-firmware
+        sof-firmware
         openelec-dvb-firmware
       ] ++ optional (pkgs.stdenv.hostPlatform.isAarch32 || pkgs.stdenv.hostPlatform.isAarch64) raspberrypiWirelessFirmware
         ++ optionals (versionOlder config.boot.kernelPackages.kernel.version "4.13") [
@@ -63,8 +72,7 @@ in {
         b43Firmware_5_1_138
         b43Firmware_6_30_163_46
         b43FirmwareCutter
-        facetimehd-firmware
-      ];
+      ] ++ optional (pkgs.stdenv.hostPlatform.isi686 || pkgs.stdenv.hostPlatform.isx86_64) facetimehd-firmware;
     })
   ];
 }

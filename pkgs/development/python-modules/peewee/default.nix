@@ -10,14 +10,14 @@
 buildPythonPackage rec {
 
   pname = "peewee";
-  version = "3.9.5";
+  version = "3.13.3";
 
   # pypi release does not provide tests
   src = fetchFromGitHub {
     owner = "coleifer";
     repo = pname;
     rev = version;
-    sha256 = "0c2hkkpp9rajnw5px17wd72x95k7wc2a0iy55pjhi5ly2cqd9ylv";
+    sha256 = "1r67hxb9m6v0xbnbqfnsw6dahmdr94pf81b4x51jfw6x9sa4izi4";
   };
 
 
@@ -38,9 +38,11 @@ buildPythonPackage rec {
   ] ++ (lib.optional withPostgres psycopg2)
     ++ (lib.optional withMysql mysql-connector);
 
+  doCheck = withPostgres;
+
   meta = with stdenv.lib;{
     description = "a small, expressive orm";
-    homepage    = http://peewee-orm.com;
+    homepage    = "http://peewee-orm.com";
     license     = licenses.mit;
   };
 }

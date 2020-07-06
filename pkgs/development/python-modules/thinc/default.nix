@@ -4,32 +4,30 @@
 , fetchPypi
 , pythonOlder
 , pytest
-, cython
+, blis
+, catalogue
 , cymem
+, cython
 , darwin
-, msgpack-numpy
-, msgpack-python
-, preshed
-, numpy
-, murmurhash
-, pathlib
 , hypothesis
-, tqdm
-, cytoolz
-, plac
-, six
 , mock
-, wrapt
-, dill
+, murmurhash
+, numpy
+, pathlib
+, plac
+, preshed
+, srsly
+, tqdm
+, wasabi
 }:
 
 buildPythonPackage rec {
   pname = "thinc";
-  version = "6.12.1";
+  version = "7.4.1";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1kkp8b3xcs3yn3ia5sxrh086c9xv27s2khdxd17abdypxxa99ich";
+    sha256 = "17lampllwq50yjl2djs9bs5rp29xw55gqj762npqi3cvvj2glf81";
   };
 
   buildInputs = lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [
@@ -37,19 +35,17 @@ buildPythonPackage rec {
   ]);
 
   propagatedBuildInputs = [
-   cython
+   blis
+   catalogue
    cymem
-   msgpack-numpy
-   msgpack-python
-   preshed
-   numpy
+   cython
    murmurhash
-   tqdm
-   cytoolz
+   numpy
    plac
-   six
-   wrapt
-   dill
+   preshed
+   srsly
+   tqdm
+   wasabi
   ] ++ lib.optional (pythonOlder "3.4") pathlib;
 
 
@@ -59,27 +55,26 @@ buildPythonPackage rec {
     pytest
   ];
 
-  prePatch = ''
-    substituteInPlace setup.py \
-      --replace "pathlib==1.0.1" "pathlib>=1.0.0,<2.0.0" \
-      --replace "plac>=0.9.6,<1.0.0" "plac>=0.9.6" \
-      --replace "msgpack-numpy<0.4.4" "msgpack-numpy" \
-      --replace "wheel>=0.32.0,<0.33.0" "wheel" \
-      --replace "wrapt>=1.10.0,<1.11.0" "wrapt" \
-      --replace "msgpack>=0.5.6,<0.6.0" "msgpack"
-  '';
-
   # Cannot find cython modules.
   doCheck = false;
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace "catalogue>=0.0.7,<1.1.0" "catalogue>=0.0.7,<3.0" \
+      --replace "plac>=0.9.6,<1.2.0" "plac>=0.9.6,<2.0" \
+      --replace "srsly>=0.0.6,<1.1.0" "srsly>=0.0.6,<3.0"
+  '';
 
   checkPhase = ''
     pytest thinc/tests
   '';
 
+  pythonImportsCheck = [ "thinc" ];
+
   meta = with stdenv.lib; {
     description = "Practical Machine Learning for NLP in Python";
-    homepage = https://github.com/explosion/thinc;
+    homepage = "https://github.com/explosion/thinc";
     license = licenses.mit;
-    maintainers = with maintainers; [ aborsu sdll ];
+    maintainers = with maintainers; [ aborsu danieldk sdll ];
     };
 }

@@ -1,23 +1,27 @@
 { stdenv
 , buildPythonPackage
 , fetchPypi
+, isPy27
 , dateutil
 , six
 , mock
 , nose
+, pytest
 }:
 
 buildPythonPackage rec {
   pname = "freezegun";
-  version = "0.3.11";
+  version = "0.3.15";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "e839b43bfbe8158b4d62bb97e6313d39f3586daf48e1314fb1083d2ef17700da";
+    sha256 = "e2062f2c7f95cc276a834c22f1a17179467176b624cc6f936e8bc3be5535ad1b";
   };
 
   propagatedBuildInputs = [ dateutil six ];
-  checkInputs = [ mock nose ];
+  checkInputs = [ mock nose pytest ];
+  # contains python3 specific code
+  doCheck = !isPy27;
 
   meta = with stdenv.lib; {
     description = "FreezeGun: Let your Python tests travel through time";

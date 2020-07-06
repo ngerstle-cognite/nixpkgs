@@ -1,11 +1,11 @@
 { stdenv, fetchurl, texinfo, allegro, perl, libX11 }:
 
 stdenv.mkDerivation rec {
-  name = "cgui-${version}";
+  pname = "cgui";
   version="2.1.0";
 
   src = fetchurl {
-    url = "mirror://sourceforge/project/cgui/${version}/${name}.tar.gz";
+    url = "mirror://sourceforge/project/cgui/${version}/${pname}-${version}.tar.gz";
     sha256 = "1pp1hvidpilq37skkmbgba4lvzi01rasy04y0cnas9ck0canv00s";
   };
 
@@ -23,5 +23,6 @@ stdenv.mkDerivation rec {
     description = "A multiplatform basic GUI library";
     maintainers = [ maintainers.raskin ];
     platforms = platforms.linux;
+    license = licenses.free;
   };
 }

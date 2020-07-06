@@ -1,12 +1,12 @@
 { stdenv, fetchurl, makeWrapper, jre }:
 
 stdenv.mkDerivation rec {
-  name = "ktlint-${version}";
-  version = "0.32.0";
+  pname = "ktlint";
+  version = "0.37.2";
 
   src = fetchurl {
     url = "https://github.com/shyiko/ktlint/releases/download/${version}/ktlint";
-    sha256 = "0ha4n2gsfvcycwammywqr7xg5ydlgpflmlm380v767178p5r5llm";
+    sha256 = "1hhycvvp21gy6g71hwf3pk2jnccpnhcf2z7c85shzffhddy1wc0v";
   };
 
   nativeBuildInputs = [ makeWrapper ];
@@ -14,8 +14,8 @@ stdenv.mkDerivation rec {
   propagatedBuildInputs = [ jre ];
 
   unpackCmd = ''
-    mkdir -p ${name}
-    cp $curSrc ${name}/ktlint
+    mkdir -p ${pname}-${version}
+    cp $curSrc ${pname}-${version}/ktlint
   '';
 
   installPhase = ''
@@ -30,7 +30,7 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "An anti-bikeshedding Kotlin linter with built-in formatter";
-    homepage = https://ktlint.github.io/;
+    homepage = "https://ktlint.github.io/";
     license = licenses.mit;
     platforms = platforms.all;
     maintainers = with maintainers; [ tadfisher ];

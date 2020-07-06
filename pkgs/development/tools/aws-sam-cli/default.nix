@@ -1,39 +1,33 @@
-{ lib
+{ fetchFromGitHub
+, lib
 , python
+, enableTelemetry ? false
 }:
 
 let
   py = python.override {
     packageOverrides = self: super: {
-      click = super.click.overridePythonAttrs (oldAttrs: rec {
-        version = "6.7";
+      aws-sam-translator = super.aws-sam-translator.overridePythonAttrs (oldAttrs: rec {
+        version = "1.25.0";
         src = oldAttrs.src.override {
           inherit version;
-          sha256 = "f15516df478d5a56180fbf80e68f206010e6d160fc39fa508b65e035fd75130b";
+          sha256 = "08756yl5lpqgrpr80f2b6bdcgygr37l6q1yygklcg9hz4yfpccav";
         };
       });
 
-      requests = super.requests.overridePythonAttrs (oldAttrs: rec {
-        version = "2.20.1";
+      flask = super.flask.overridePythonAttrs (oldAttrs: rec {
+        version = "1.0.2";
         src = oldAttrs.src.override {
           inherit version;
-          sha256 = "ea881206e59f41dbd0bd445437d792e43906703fff75ca8ff43ccdb11f33f263";
+          sha256 = "0j6f4a9rpfh25k1gp7azqhnni4mb4fgy50jammgjgddw1l3w0w92";
         };
       });
 
-      idna = super.idna.overridePythonAttrs (oldAttrs: rec {
-        version = "2.7";
+      cookiecutter = super.cookiecutter.overridePythonAttrs (oldAttrs: rec {
+        version = "1.6.0";
         src = oldAttrs.src.override {
           inherit version;
-          sha256 = "684a38a6f903c1d71d6d5fac066b58d7768af4de2b832e426ec79c30daa94a16";
-        };
-      });
-
-      six = super.six.overridePythonAttrs (oldAttrs: rec {
-        version = "1.11";
-        src = oldAttrs.src.override {
-          inherit version;
-          sha256 = "70e8a77beed4562e7f14fe23a786b54f6296e34344c23bc42f07b15018ff98e9";
+          sha256 = "0glsvaz8igi2wy1hsnhm9fkn6560vdvdixzvkq6dn20z3hpaa5hk";
         };
       });
     };
@@ -45,11 +39,11 @@ with py.pkgs;
 
 buildPythonApplication rec {
   pname = "aws-sam-cli";
-  version = "0.14.2";
+  version = "1.0.0rc1";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "b7f80838d57c1096a9a03ed703a91a8a5775a6ead33df8f31765ecf39b3a956f";
+    sha256 = "011b334gdvd9lhqia8c952q3cmzj99vik680180nbp0qh2xw6zpf";
   };
 
   # Tests are not included in the PyPI package
@@ -65,16 +59,34 @@ buildPythonApplication rec {
     docker
     flask
     idna
+    jmespath
     pathlib2
     requests
     serverlessrepo
     six
+    tomlkit
   ];
 
+  postFixup = if enableTelemetry then "echo aws-sam-cli TELEMETRY IS ENABLED" else ''
+    # Disable telemetry: https://github.com/awslabs/aws-sam-cli/issues/1272
+    wrapProgram $out/bin/sam --set  SAM_CLI_TELEMETRY 0
+  '';
+
+  # fix over-restrictive version bounds
+  postPatch = ''
+    substituteInPlace requirements/base.txt \
+      --replace "boto3~=1.13.0, >=1.13.0" "boto3~=1.14.3" \
+      --replace "serverlessrepo==0.1.9" "serverlessrepo~=0.1.9" \
+      --replace "python-dateutil~=2.6, <2.8.1" "python-dateutil~=2.6" \
+      --replace "jmespath~=0.9.5" "jmespath~=0.10.0" \
+      --replace "tomlkit==0.5.8" "tomlkit~=0.6.0" \
+      --replace "requests==2.22.0" "requests~=2.22"
+  '';
+
   meta = with lib; {
-    homepage = https://github.com/awslabs/aws-sam-cli;
+    homepage = "https://github.com/awslabs/aws-sam-cli";
     description = "CLI tool for local development and testing of Serverless applications";
     license = licenses.asl20;
-    maintainers = with maintainers; [ andreabedini dhkl ];
+    maintainers = with maintainers; [ andreabedini lo1tuma ];
   };
 }

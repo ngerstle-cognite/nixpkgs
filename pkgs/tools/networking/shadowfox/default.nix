@@ -2,20 +2,20 @@
 
 buildGoModule rec {
   pname = "shadowfox";
-  version = "1.7.20";
+  version = "2.2.0";
 
   src = fetchFromGitHub {
     owner = "SrKomodo";
     repo = "shadowfox-updater";
     rev = "v${version}";
-    sha256 = "14crips12l4n050b8hrqkfqbxl0l8s3y4y9lm8n0bjpxdpjbpr7q";
+    sha256 = "125mw70jidbp436arhv77201jdp6mpgqa2dzmrpmk55f9bf29sg6";
   };
 
   goPackagePath = "github.com/SrKomodo/shadowfox-updater";
 
-  modSha256 = "143ky1fj7xglhjyzh78qzgh1m4j53kqps25c9vnq9q4vdyzm93sr";
+  vendorSha256 = "06ar9ivry9b01609izjbl6hqgg0cy7aqd8n2cqpyq0g7my0l0lbj";
 
-  buildFlags = "--tags release";
+  buildFlags = [ "--tags" "release" ];
 
   meta = with stdenv.lib; {
     description = ''

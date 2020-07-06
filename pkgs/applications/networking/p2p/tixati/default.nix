@@ -1,17 +1,17 @@
-{ stdenv, fetchurl, glib, zlib, dbus, dbus-glib, gtk2, gdk_pixbuf, cairo, pango }:
+{ stdenv, fetchurl, glib, zlib, dbus, dbus-glib, gtk2, gdk-pixbuf, cairo, pango }:
 
 stdenv.mkDerivation rec {
-  name = "tixati-${version}";
-  version = "2.59";
+  pname = "tixati";
+  version = "2.73";
 
   src = fetchurl {
     url = "https://download2.tixati.com/download/tixati-${version}-1.x86_64.manualinstall.tar.gz";
-    sha256 = "0vf5y9kj2g7psgdzv2r46jdh5krdps838ca4wwwxi0dd1mwa65my";
+    sha256 = "1ncrfc4wgf02la2h3zpdcz07b980n9232lg5f62q7ab79fjrcrfr";
   };
 
   installPhase = ''
     patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-             --set-rpath ${stdenv.lib.makeLibraryPath [ glib zlib dbus dbus-glib gtk2 gdk_pixbuf cairo pango ]} \
+             --set-rpath ${stdenv.lib.makeLibraryPath [ glib zlib dbus dbus-glib gtk2 gdk-pixbuf cairo pango ]} \
              tixati
     install -D tixati         $out/bin/tixati
     install -D tixati.desktop $out/share/applications/tixati.desktop
@@ -22,7 +22,7 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "Torrent client";
-    homepage = http://www.tixati.com;
+    homepage = "http://www.tixati.com";
     license = licenses.unfree;
     platforms = [ "x86_64-linux" ];
     maintainers = with maintainers; [ volth ];

@@ -5,14 +5,14 @@ with lib;
 let
 
   cfg = config.services.openldap;
-  openldap = pkgs.openldap;
+  openldap = cfg.package;
 
   dataFile = pkgs.writeText "ldap-contents.ldif" cfg.declarativeContents;
   configFile = pkgs.writeText "slapd.conf" ((optionalString cfg.defaultSchemas ''
-    include ${pkgs.openldap.out}/etc/schema/core.schema
-    include ${pkgs.openldap.out}/etc/schema/cosine.schema
-    include ${pkgs.openldap.out}/etc/schema/inetorgperson.schema
-    include ${pkgs.openldap.out}/etc/schema/nis.schema
+    include ${openldap.out}/etc/schema/core.schema
+    include ${openldap.out}/etc/schema/cosine.schema
+    include ${openldap.out}/etc/schema/inetorgperson.schema
+    include ${openldap.out}/etc/schema/nis.schema
   '') + ''
     ${cfg.extraConfig}
     database ${cfg.database}
@@ -46,27 +46,39 @@ in
         ";
       };
 
+      package = mkOption {
+        type = types.package;
+        default = pkgs.openldap;
+        description = ''
+          OpenLDAP package to use.
+
+          This can be used to, for example, set an OpenLDAP package
+          with custom overrides to enable modules or other
+          functionality.
+        '';
+      };
+
       user = mkOption {
-        type = types.string;
+        type = types.str;
         default = "openldap";
         description = "User account under which slapd runs.";
       };
 
       group = mkOption {
-        type = types.string;
+        type = types.str;
         default = "openldap";
         description = "Group account under which slapd runs.";
       };
 
       urlList = mkOption {
-        type = types.listOf types.string;
+        type = types.listOf types.str;
         default = [ "ldap:///" ];
         description = "URL list slapd should listen on.";
         example = [ "ldaps:///" ];
       };
 
       dataDir = mkOption {
-        type = types.string;
+        type = types.path;
         default = "/var/db/openldap";
         description = "The database directory.";
       };
@@ -152,10 +164,10 @@ in
         ";
         example = literalExample ''
             '''
-            include ${pkgs.openldap.out}/etc/schema/core.schema
-            include ${pkgs.openldap.out}/etc/schema/cosine.schema
-            include ${pkgs.openldap.out}/etc/schema/inetorgperson.schema
-            include ${pkgs.openldap.out}/etc/schema/nis.schema
+            include ${openldap.out}/etc/schema/core.schema
+            include ${openldap.out}/etc/schema/cosine.schema
+            include ${openldap.out}/etc/schema/inetorgperson.schema
+            include ${openldap.out}/etc/schema/nis.schema
 
             database bdb
             suffix dc=example,dc=org
@@ -231,14 +243,18 @@ in
 
   };
 
+  meta = {
+    maintainers = [ lib.maintainers.mic92 ];
+  };
+
 
   ###### implementation
 
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.rootpwFile != null || cfg.rootpw != null;
-        message = "Either services.openldap.rootpw or services.openldap.rootpwFile must be set";
+        assertion = cfg.configDir != null || cfg.rootpwFile != null || cfg.rootpw != null;
+        message = "services.openldap: Unless configDir is set, either rootpw or rootpwFile must be set";
       }
     ];
 
@@ -259,6 +275,8 @@ in
           ${openldap.out}/bin/slapadd ${configOpts} -l ${dataFile}
         ''}
         chown -R "${cfg.user}:${cfg.group}" "${cfg.dataDir}"
+
+        ${openldap}/bin/slaptest ${configOpts}
       '';
       serviceConfig.ExecStart =
         "${openldap.out}/libexec/slapd -d '${cfg.logLevel}' " +

@@ -1,6 +1,7 @@
 { lib
 , buildPythonPackage
 , fetchPypi
+, pythonOlder
 , pytest
 , numpy
 , nbconvert
@@ -8,21 +9,22 @@
 , mock
 , jinja2
 , branca
-, six
 , requests
 }:
 
 buildPythonPackage rec {
   pname = "folium";
-  version = "0.8.3";
+  version = "0.11.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "b7a1e907caac6ddaf0614555f58ba9af2ed65356ccc77f6ba6fc3df202d8f146";
+    sha256 = "540789abc21872469e52c59ac3962c61259a8df557feadd6514eb23eb0a64ca7";
   };
 
+  disabled = pythonOlder "3.5";
+
   checkInputs = [ pytest nbconvert pandas mock ];
-  propagatedBuildInputs = [ jinja2 branca six requests numpy ];
+  propagatedBuildInputs = [ jinja2 branca requests numpy ];
 
   # No tests in archive
   doCheck = false;
@@ -33,7 +35,7 @@ buildPythonPackage rec {
 
   meta = {
     description = "Make beautiful maps with Leaflet.js & Python";
-    homepage = https://github.com/python-visualization/folium;
+    homepage = "https://github.com/python-visualization/folium";
     license = with lib.licenses; [ mit ];
     maintainers = with lib.maintainers; [ fridh ];
   };

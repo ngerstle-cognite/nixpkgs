@@ -1,15 +1,21 @@
-{ stdenv, buildPythonPackage, fetchPypi, six }:
+{ stdenv, buildPythonPackage, fetchPypi, six, pytest }:
 
 buildPythonPackage rec {
   pname = "latexcodec";
-  version = "1.0.6";
+  version = "2.0.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0s4wdbg0w2l8pj3i0y4510i0s04p8nhxcsa2z41bjsv0k66npb81";
+    sha256 = "0pyzhidpnc3q3rh9d5hxhzv99rl5limyyrll7xcyssci92fn8gyd";
   };
 
   propagatedBuildInputs = [ six ];
+
+  checkInputs = [ pytest ];
+
+  checkPhase = ''
+    pytest
+  '';
 
   meta = {
     homepage = "https://github.com/mcmtroffaes/latexcodec";

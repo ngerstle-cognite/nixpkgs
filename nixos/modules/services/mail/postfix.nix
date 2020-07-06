@@ -13,6 +13,7 @@ let
                       || cfg.extraAliases != "";
   haveTransport = cfg.transport != "";
   haveVirtual = cfg.virtual != "";
+  haveLocalRecipients = cfg.localRecipients != null;
 
   clientAccess =
     optional (cfg.dnsBlacklistOverrides != "")
@@ -244,6 +245,7 @@ let
 
   aliasesFile = pkgs.writeText "postfix-aliases" aliases;
   virtualFile = pkgs.writeText "postfix-virtual" cfg.virtual;
+  localRecipientMapFile = pkgs.writeText "postfix-local-recipient-map" (concatMapStrings (x: x + " ACCEPT\n") cfg.localRecipients);
   checkClientAccessFile = pkgs.writeText "postfix-check-client-access" cfg.dnsBlacklistOverrides;
   mainCfFile = pkgs.writeText "postfix-main.cf" mainCf;
   masterCfFile = pkgs.writeText "postfix-master.cf" masterCfContent;
@@ -267,6 +269,7 @@ in
       };
 
       enableSmtp = mkOption {
+        type = types.bool;
         default = true;
         description = "Whether to enable smtp in master.cf.";
       };
@@ -275,6 +278,17 @@ in
         type = types.bool;
         default = false;
         description = "Whether to enable smtp submission.";
+      };
+
+      enableSubmissions = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether to enable smtp submission via smtps.
+
+          According to RFC 8314 this should be preferred
+          over STARTTLS for submission of messages by end user clients.
+        '';
       };
 
       submissionOptions = mkOption {
@@ -293,6 +307,29 @@ in
           milter_macro_daemon_name = "ORIGINATING";
         };
         description = "Options for the submission config in master.cf";
+      };
+
+      submissionsOptions = mkOption {
+        type = types.attrs;
+        default = {
+          smtpd_sasl_auth_enable = "yes";
+          smtpd_client_restrictions = "permit_sasl_authenticated,reject";
+          milter_macro_daemon_name = "ORIGINATING";
+        };
+        example = {
+          smtpd_sasl_auth_enable = "yes";
+          smtpd_sasl_type = "dovecot";
+          smtpd_client_restrictions = "permit_sasl_authenticated,reject";
+          milter_macro_daemon_name = "ORIGINATING";
+        };
+        description = ''
+          Options for the submission config via smtps in master.cf.
+
+          smtpd_tls_security_level will be set to encrypt, if it is missing
+          or has one of the values "may" or "none".
+
+          smtpd_tls_wrappermode with value "yes" will be added automatically.
+        '';
       };
 
       setSendmail = mkOption {
@@ -445,7 +482,7 @@ in
       };
 
       config = mkOption {
-        type = with types; attrsOf (either bool (either str (listOf str)));
+        type = with types; attrsOf (oneOf [ bool str (listOf str) ]);
         description = ''
           The main.cf configuration file as key value set.
         '';
@@ -506,6 +543,19 @@ in
         '';
       };
 
+      localRecipients = mkOption {
+        type = with types; nullOr (listOf str);
+        default = null;
+        description = ''
+          List of accepted local users. Specify a bare username, an
+          <literal>"@domain.tld"</literal> wild-card, or a complete
+          <literal>"user@domain.tld"</literal> address. If set, these names end
+          up in the local recipient map -- see the local(8) man-page -- and
+          effectively replace the system user database lookup that's otherwise
+          used by default.
+        '';
+      };
+
       transport = mkOption {
         default = "";
         description = "
@@ -515,7 +565,7 @@ in
 
       dnsBlacklists = mkOption {
         default = [];
-        type = with types; listOf string;
+        type = with types; listOf str;
         description = "dns blacklist servers to use with smtpd_client_restrictions";
       };
 
@@ -597,10 +647,7 @@ in
     {
 
       environment = {
-        etc = singleton
-          { source = "/var/lib/postfix/conf";
-            target = "postfix";
-          };
+        etc.postfix.source = "/var/lib/postfix/conf";
 
         # This makes it comfortable to run 'postqueue/postdrop' for example.
         systemPackages = [ pkgs.postfix ];
@@ -611,6 +658,14 @@ in
       services.mail.sendmailSetuidWrapper = mkIf config.services.postfix.setSendmail {
         program = "sendmail";
         source = "${pkgs.postfix}/bin/sendmail";
+        group = setgidGroup;
+        setuid = false;
+        setgid = true;
+      };
+
+      security.wrappers.mailq = {
+        program = "mailq";
+        source = "${pkgs.postfix}/bin/mailq";
         group = setgidGroup;
         setuid = false;
         setgid = true;
@@ -632,21 +687,20 @@ in
         setgid = true;
       };
 
-      users.users = optional (user == "postfix")
-        { name = "postfix";
-          description = "Postfix mail server user";
-          uid = config.ids.uids.postfix;
-          group = group;
+      users.users = optionalAttrs (user == "postfix")
+        { postfix = {
+            description = "Postfix mail server user";
+            uid = config.ids.uids.postfix;
+            group = group;
+          };
         };
 
       users.groups =
-        optional (group == "postfix")
-        { name = group;
-          gid = config.ids.gids.postfix;
+        optionalAttrs (group == "postfix")
+        { ${group}.gid = config.ids.gids.postfix;
         }
-        ++ optional (setgidGroup == "postdrop")
-        { name = setgidGroup;
-          gid = config.ids.gids.postdrop;
+        // optionalAttrs (setgidGroup == "postdrop")
+        { ${setgidGroup}.gid = config.ids.gids.postdrop;
         };
 
       systemd.services.postfix =
@@ -742,6 +796,7 @@ in
       // optionalAttrs haveAliases { alias_maps = [ "${cfg.aliasMapType}:/etc/postfix/aliases" ]; }
       // optionalAttrs haveTransport { transport_maps = [ "hash:/etc/postfix/transport" ]; }
       // optionalAttrs haveVirtual { virtual_alias_maps = [ "${cfg.virtualMapType}:/etc/postfix/virtual" ]; }
+      // optionalAttrs haveLocalRecipients { local_recipient_maps = [ "hash:/etc/postfix/local_recipients" ] ++ optional haveAliases "$alias_maps"; }
       // optionalAttrs (cfg.dnsBlacklists != []) { smtpd_client_restrictions = clientRestrictions; }
       // optionalAttrs cfg.useSrs {
         sender_canonical_maps = [ "tcp:127.0.0.1:10001" ];
@@ -857,23 +912,43 @@ in
           command = "smtp";
           args = [ "-o" "smtp_fallback_relay=" ];
         };
+      } // optionalAttrs cfg.enableSubmissions {
+        submissions = {
+          type = "inet";
+          private = false;
+          command = "smtpd";
+          args = let
+            mkKeyVal = opt: val: [ "-o" (opt + "=" + val) ];
+            adjustSmtpTlsSecurityLevel = !(cfg.submissionsOptions ? smtpd_tls_security_level) ||
+                                      cfg.submissionsOptions.smtpd_tls_security_level == "none" ||
+                                      cfg.submissionsOptions.smtpd_tls_security_level == "may";
+            submissionsOptions = cfg.submissionsOptions // {
+              smtpd_tls_wrappermode = "yes";
+            } // optionalAttrs adjustSmtpTlsSecurityLevel {
+              smtpd_tls_security_level = "encrypt";
+            };
+          in concatLists (mapAttrsToList mkKeyVal submissionsOptions);
+        };
       };
     }
 
     (mkIf haveAliases {
-      services.postfix.aliasFiles."aliases" = aliasesFile;
+      services.postfix.aliasFiles.aliases = aliasesFile;
     })
     (mkIf haveTransport {
-      services.postfix.mapFiles."transport" = transportFile;
+      services.postfix.mapFiles.transport = transportFile;
     })
     (mkIf haveVirtual {
-      services.postfix.mapFiles."virtual" = virtualFile;
+      services.postfix.mapFiles.virtual = virtualFile;
+    })
+    (mkIf haveLocalRecipients {
+      services.postfix.mapFiles.local_recipients = localRecipientMapFile;
     })
     (mkIf cfg.enableHeaderChecks {
-      services.postfix.mapFiles."header_checks" = headerChecksFile;
+      services.postfix.mapFiles.header_checks = headerChecksFile;
     })
     (mkIf (cfg.dnsBlacklists != []) {
-      services.postfix.mapFiles."client_access" = checkClientAccessFile;
+      services.postfix.mapFiles.client_access = checkClientAccessFile;
     })
   ]);
 }

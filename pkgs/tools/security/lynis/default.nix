@@ -1,18 +1,17 @@
-{ stdenv, makeWrapper, fetchFromGitHub, gawk }:
+{ stdenv, makeWrapper, fetchFromGitHub, gawk, installShellFiles }:
 
 stdenv.mkDerivation rec {
   pname = "lynis";
-  version = "2.7.4";
-  name = "${pname}-${version}";
+  version = "3.0.0";
 
   src = fetchFromGitHub {
     owner = "CISOfy";
-    repo = "${pname}";
-    rev = "${version}";
-    sha256 = "1jjk5hcxmp4f4ppsljiq95l2ln6b03azydap3b35lsvxkjybv88k";
+    repo = pname;
+    rev = version;
+    sha256 = "05p8h2ww4jcc6lgxrm796cbvlfmw26rxq5fmw0xxavbpadiw752j";
   };
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ installShellFiles makeWrapper ];
 
   postPatch = ''
     grep -rl '/usr/local/lynis' ./ | xargs sed -i "s@/usr/local/lynis@$out/share/lynis@g"
@@ -23,6 +22,10 @@ stdenv.mkDerivation rec {
     cp -r include db default.prf $out/share/lynis/
     cp -a lynis $out/bin
     wrapProgram "$out/bin/lynis" --prefix PATH : ${stdenv.lib.makeBinPath [ gawk ]}
+
+    installManPage lynis.8
+    installShellCompletion --bash --name lynis.bash \
+      extras/bash_completion.d/lynis
   '';
 
   meta = with stdenv.lib; {

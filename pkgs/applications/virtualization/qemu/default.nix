@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, fetchpatch, python2, zlib, pkgconfig, glib
+{ stdenv, fetchurl, fetchpatch, python, zlib, pkgconfig, glib
 , ncurses, perl, pixman, vde2, alsaLib, texinfo, flex
 , bison, lzo, snappy, libaio, gnutls, nettle, curl
 , makeWrapper
@@ -8,14 +8,14 @@
 , seccompSupport ? stdenv.isLinux, libseccomp
 , pulseSupport ? !stdenv.isDarwin, libpulseaudio
 , sdlSupport ? !stdenv.isDarwin, SDL2
-, gtkSupport ? !stdenv.isDarwin && !xenSupport, gtk3, gettext, vte
+, gtkSupport ? !stdenv.isDarwin && !xenSupport, gtk3, gettext, vte, wrapGAppsHook
 , vncSupport ? true, libjpeg, libpng
 , smartcardSupport ? true, libcacard
 , spiceSupport ? !stdenv.isDarwin, spice, spice-protocol
 , usbredirSupport ? spiceSupport, usbredir
 , xenSupport ? false, xen
 , cephSupport ? false, ceph
-, openGLSupport ? sdlSupport, mesa_noglu, epoxy, libdrm
+, openGLSupport ? sdlSupport, mesa, epoxy, libdrm
 , virglSupport ? openGLSupport, virglrenderer
 , smbdSupport ? false, samba
 , hostCpuOnly ? false
@@ -35,19 +35,19 @@ let
 in
 
 stdenv.mkDerivation rec {
-  version = "3.1.0";
-  name = "qemu-"
-    + stdenv.lib.optionalString xenSupport "xen-"
-    + stdenv.lib.optionalString hostCpuOnly "host-cpu-only-"
-    + stdenv.lib.optionalString nixosTestRunner "for-vm-tests-"
-    + version;
+  version = "5.0.0";
+  pname = "qemu"
+    + stdenv.lib.optionalString xenSupport "-xen"
+    + stdenv.lib.optionalString hostCpuOnly "-host-cpu-only"
+    + stdenv.lib.optionalString nixosTestRunner "-for-vm-tests";
 
   src = fetchurl {
-    url = "https://wiki.qemu.org/download/qemu-${version}.tar.bz2";
-    sha256 = "08frr1fdjx8qcfh3fafn10kibdwbvkqqvfl7hpqbm7i9dg4f1zlq";
+    url= "https://download.qemu.org/qemu-${version}.tar.xz";
+    sha256 = "1dlcwyshdp94fwd30pddxf9bn2q8dfw5jsvry2gvdj551wmaj4rg";
   };
 
-  nativeBuildInputs = [ python2 pkgconfig flex bison ];
+  nativeBuildInputs = [ python python.pkgs.sphinx pkgconfig flex bison ]
+    ++ optionals gtkSupport [ wrapGAppsHook ];
   buildInputs =
     [ zlib glib ncurses perl pixman
       vde2 texinfo makeWrapper lzo snappy
@@ -66,7 +66,7 @@ stdenv.mkDerivation rec {
     ++ optionals stdenv.isLinux [ alsaLib libaio libcap_ng libcap attr ]
     ++ optionals xenSupport [ xen ]
     ++ optionals cephSupport [ ceph ]
-    ++ optionals openGLSupport [ mesa_noglu epoxy libdrm ]
+    ++ optionals openGLSupport [ mesa epoxy libdrm ]
     ++ optionals virglSupport [ virglrenderer ]
     ++ optionals smbdSupport [ samba ];
 
@@ -78,25 +78,19 @@ stdenv.mkDerivation rec {
     ./no-etc-install.patch
     ./fix-qemu-ga.patch
     ./9p-ignore-noatime.patch
-    (fetchpatch {
-      name = "CVE-2019-3812.patch";
-      url = "https://git.qemu.org/?p=qemu.git;a=patch;h=b05b267840515730dbf6753495d5b7bd8b04ad1c";
-      sha256 = "03a5vc5wvirbyi5r8kb2r4m2w6f1zmh9bqsr2psh4pblwar0nf55";
-    })
   ] ++ optional nixosTestRunner ./force-uid0-on-9p.patch
-    ++ optional pulseSupport ./fix-hda-recording.patch
     ++ optionals stdenv.hostPlatform.isMusl [
     (fetchpatch {
-      url = https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/xattr_size_max.patch;
+      url = "https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/xattr_size_max.patch";
       sha256 = "1xfdjs1jlvs99hpf670yianb8c3qz2ars8syzyz8f2c2cp5y4bxb";
     })
     (fetchpatch {
-      url = https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/musl-F_SHLCK-and-F_EXLCK.patch;
+      url = "https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/musl-F_SHLCK-and-F_EXLCK.patch";
       sha256 = "1gm67v41gw6apzgz7jr3zv9z80wvkv0jaxd2w4d16hmipa8bhs0k";
     })
     ./sigrtminmax.patch
     (fetchpatch {
-      url = https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/fix-sigevent-and-sigval_t.patch;
+      url = "https://raw.githubusercontent.com/alpinelinux/aports/2bb133986e8fa90e2e76d53369f03861a87a74ef/main/qemu/fix-sigevent-and-sigval_t.patch";
       sha256 = "0wk0rrcqywhrw9hygy6ap0lfg314m9z1wr2hn8338r5gfcw75mav";
     })
   ];
@@ -113,6 +107,9 @@ stdenv.mkDerivation rec {
     [ "--audio-drv-list=${audio}"
       "--sysconfdir=/etc"
       "--localstatedir=/var"
+      "--enable-docs"
+      "--enable-tools"
+      "--enable-guest-agent"
     ]
     # disable sysctl check on darwin.
     ++ optional stdenv.isDarwin "--cpu=x86_64"
@@ -133,12 +130,17 @@ stdenv.mkDerivation rec {
     ++ optional smbdSupport "--smbd=${samba}/bin/smbd";
 
   doCheck = false; # tries to access /dev
+  dontWrapGApps = true;
 
-  postFixup =
-    ''
+  postFixup = ''
       # copy qemu-ga (guest agent) to separate output
       mkdir -p $ga/bin
       cp $out/bin/qemu-ga $ga/bin/
+    '' + optionalString gtkSupport ''
+      # wrap GTK Binaries
+      for f in $out/bin/qemu-system-*; do
+        wrapGApp $f
+      done
     '';
 
   # Add a ‘qemu-kvm’ wrapper for compatibility/convenience.
@@ -155,7 +157,7 @@ stdenv.mkDerivation rec {
   };
 
   meta = with stdenv.lib; {
-    homepage = http://www.qemu.org/;
+    homepage = "http://www.qemu.org/";
     description = "A generic and open source machine emulator and virtualizer";
     license = licenses.gpl2Plus;
     maintainers = with maintainers; [ eelco ];

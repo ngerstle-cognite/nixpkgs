@@ -1,27 +1,28 @@
 { stdenv, fetchFromGitHub, cmake, pkgconfig, zip, gettext, perl
 , wxGTK31, libXext, libXi, libXt, libXtst, xercesc
 , qrencode, libuuid, libyubikey, yubikey-personalization
-, curl, openssl
+, curl, openssl, file
 }:
 
 stdenv.mkDerivation rec {
   pname = "pwsafe";
-  version = "1.07";
+  version = "3.52.0";
 
   src = fetchFromGitHub {
-    owner = "${pname}";
-    repo = "${pname}";
-    rev = "${version}BETA";
-    sha256 = "0syxmliybgvm9j6d426l7j12ryrl42azy80m66jc56fv9nkqwaya";
+    owner = pname;
+    repo = pname;
+    rev = "${version}";
+    sha256 = "1ka7xsl63v0559fzf3pwc1iqr37gwr4vq5iaxa2hzar2g28hsxvh";
   };
 
   nativeBuildInputs = [ 
-  	cmake gettext perl pkgconfig zip
+    cmake gettext perl pkgconfig zip
   ];
   buildInputs = [
     libXext libXi libXt libXtst wxGTK31
     curl qrencode libuuid openssl xercesc
     libyubikey yubikey-personalization
+    file
   ];
 
   cmakeFlags = [
@@ -49,11 +50,10 @@ stdenv.mkDerivation rec {
     done
   '';
 
-  installFlags = [ "PREFIX=$(out)" ];
+  installFlags = [ "PREFIX=${placeholder "out"}" ];
 
   meta = with stdenv.lib; {
     description = "A password database utility";
-
     longDescription = ''
       Password Safe is a password database utility. Like many other
       such products, commercial and otherwise, it stores your
@@ -61,8 +61,7 @@ stdenv.mkDerivation rec {
       one password (the "safe combination"), instead of all the
       username/password combinations that you use.
     '';
-
-    homepage = https://pwsafe.org/;
+    homepage = "https://pwsafe.org/";
     maintainers = with maintainers; [ c0bw3b pjones ];
     platforms = platforms.linux;
     license = licenses.artistic2;

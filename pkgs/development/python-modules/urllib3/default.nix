@@ -4,11 +4,11 @@
 
 buildPythonPackage rec {
   pname = "urllib3";
-  version = "1.24.2";
+  version = "1.25.9";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "9a247273df709c4fedb38c711e44292304f73f39ab01beda9f6b9fc375669ac3";
+    sha256 = "3018294ebefce6572a474f0604c2021e33b3fd8006ecd11d62107a5d2a963527";
   };
 
   NOSE_EXCLUDE = stdenv.lib.concatStringsSep "," [
@@ -27,7 +27,7 @@ buildPythonPackage rec {
 
   meta = with stdenv.lib; {
     description = "Powerful, sanity-friendly HTTP client for Python";
-    homepage = https://github.com/shazow/urllib3;
+    homepage = "https://github.com/shazow/urllib3";
     license = licenses.mit;
   };
 }

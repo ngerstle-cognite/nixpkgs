@@ -1,10 +1,13 @@
-{ stdenv, callPackage, lib, openssl, enableNpm ? true }:
+{ callPackage, openssl, icu, python2, enableNpm ? true }:
 
 let
-  buildNodejs = callPackage ./nodejs.nix { inherit openssl; };
+  buildNodejs = callPackage ./nodejs.nix { 
+    inherit openssl icu;
+    python = python2;
+  };
 in
   buildNodejs {
     inherit enableNpm;
-    version = "10.15.3";
-    sha256 = "1mcijznh481s44i59p571a38bfvcxm9f8x2l0l1005aly0kdj8jf";
+    version = "10.21.0";
+    sha256 = "0fxpvjm3gyfwapn55av8q9w1ds0l4nmn6ybdlslcmjiqhfi1zc16";
   }

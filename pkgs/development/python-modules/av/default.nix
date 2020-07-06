@@ -1,33 +1,33 @@
 { lib
 , buildPythonPackage
 , fetchPypi
-, nose
+, isPy27
 , numpy
-, ffmpeg_4
-, libav
+, ffmpeg
 , pkgconfig
 }:
 
 buildPythonPackage rec {
   pname = "av";
-  version = "6.1.2";
+  version = "8.0.2";
+  disabled = isPy27; # setup.py no longer compatible
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "eebbb56eeae650b1fc551f94d51aee39b487bf4df73c39daea186c5d2950650f";
+    sha256 = "a3bba6bf68766b8a1a057f28869c7078cf0a1ec3207c7788c2ce8fe6f6bd8267";
   };
 
-  checkInputs = [ nose numpy ];
+  checkInputs = [ numpy ];
 
   nativeBuildInputs = [ pkgconfig ];
-  buildInputs = [ ffmpeg_4 ];
+  buildInputs = [ ffmpeg ];
 
   # Tests require downloading files from internet
   doCheck = false;
 
   meta = {
     description = "Pythonic bindings for FFmpeg/Libav";
-    homepage = https://github.com/mikeboers/PyAV/;
+    homepage = "https://github.com/mikeboers/PyAV/";
     license = lib.licenses.bsd2;
   };
 }

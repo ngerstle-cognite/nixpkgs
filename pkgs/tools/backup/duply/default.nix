@@ -1,9 +1,9 @@
-{ stdenv, fetchurl, coreutils, python2, duplicity, gawk, gnupg1, bash
+{ stdenv, fetchurl, coreutils, python2, duplicity, gawk, gnupg, bash
 , gnugrep, txt2man, makeWrapper, which
 }:
 
 stdenv.mkDerivation rec {
-  name = "duply-${version}";
+  pname = "duply";
   version = "2.2";
 
   src = fetchurl {
@@ -20,7 +20,7 @@ stdenv.mkDerivation rec {
     mkdir -p "$out/share/man/man1"
     install -vD duply "$out/bin"
     wrapProgram "$out/bin/duply" --set PATH \
-        ${stdenv.lib.makeBinPath [ coreutils python2 duplicity gawk gnupg1 bash gnugrep txt2man which ]}
+        ${stdenv.lib.makeBinPath [ coreutils python2 duplicity gawk gnupg bash gnugrep txt2man which ]}
     "$out/bin/duply" txt2man > "$out/share/man/man1/duply.1"
   '';
 
@@ -32,7 +32,7 @@ stdenv.mkDerivation rec {
       implementing backup job profiles, batch commands and more. Who says
       secure backups on non-trusted spaces are no child's play?
     '';
-    homepage = https://duply.net/;
+    homepage = "https://duply.net/";
     license = licenses.gpl2;
     maintainers = [ maintainers.bjornfor ];
     platforms = stdenv.lib.platforms.unix;

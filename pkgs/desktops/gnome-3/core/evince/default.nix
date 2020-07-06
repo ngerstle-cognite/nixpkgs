@@ -1,5 +1,5 @@
-{ fetchFromGitLab
-, stdenv
+{ stdenv
+, fetchurl
 , meson
 , ninja
 , pkgconfig
@@ -10,7 +10,7 @@
 , gtk3
 , pango
 , atk
-, gdk_pixbuf
+, gdk-pixbuf
 , shared-mime-info
 , itstool
 , gnome3
@@ -33,6 +33,9 @@
 , texlive
 , t1lib
 , gst_all_1
+, gtk-doc
+, docbook-xsl-nons
+, docbook_xml_dtd_43
 , supportMultimedia ? true # PDF multimedia
 , libgxps
 , supportXPS ? true # Open XML Paper Specification via libgxps
@@ -40,14 +43,13 @@
 
 stdenv.mkDerivation rec {
   pname = "evince";
-  version = "3.32.0";
+  version = "3.36.7";
 
-  src = fetchFromGitLab {
-    domain = "gitlab.gnome.org";
-    owner = "GNOME";
-    repo = pname;
-    rev = version;
-    sha256 = "1klq8j70q8r8hyqv1wi6jcx8g76yh46bh8614y82zzggn4cx6y3r";
+  outputs = [ "out" "dev" "devdoc" ];
+
+  src = fetchurl {
+    url = "mirror://gnome/sources/evince/${stdenv.lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
+    sha256 = "0clg9fhgjyj23mmcmw7dp512wzgv5m18fppn05qf1frz7r11mmk5";
   };
 
   postPatch = ''
@@ -56,48 +58,49 @@ stdenv.mkDerivation rec {
   '';
 
   nativeBuildInputs = [
+    appstream
+    docbook-xsl-nons
+    docbook_xml_dtd_43
+    gettext
+    gobject-introspection
+    gtk-doc
+    itstool
     meson
     ninja
     pkgconfig
-    gobject-introspection
-    gettext
-    itstool
-    yelp-tools
-    appstream
-    wrapGAppsHook
     python3
+    wrapGAppsHook
+    yelp-tools
   ];
 
   buildInputs = [
-    glib
-    gtk3
-    pango
-    atk
-    gdk_pixbuf
-    libxml2
-    gsettings-desktop-schemas
-    poppler
-    ghostscriptX
-    djvulibre
-    libspectre
-    libarchive
-    libsecret
-    librsvg
     adwaita-icon-theme
-    gspell
-    gnome-desktop
+    atk
     dbus # only needed to find the service directory
-    texlive.bin.core # kpathsea for DVI support
+    djvulibre
+    gdk-pixbuf
+    ghostscriptX
+    glib
+    gnome-desktop
+    gsettings-desktop-schemas
+    gspell
+    gtk3
+    libarchive
+    librsvg
+    libsecret
+    libspectre
+    libxml2
+    pango
+    poppler
     t1lib
+    texlive.bin.core # kpathsea for DVI support
   ] ++ stdenv.lib.optional supportXPS libgxps
     ++ stdenv.lib.optionals supportMultimedia (with gst_all_1; [
       gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav ]);
 
   mesonFlags = [
-    "-Dauto_features=enabled"
     "-Dnautilus=false"
     "-Dps=enabled"
-    "-Dgtk_doc=false"
   ];
 
   NIX_CFLAGS_COMPILE = "-I${glib.dev}/include/gio-unix-2.0";
@@ -113,7 +116,7 @@ stdenv.mkDerivation rec {
   };
 
   meta = with stdenv.lib; {
-    homepage = https://wiki.gnome.org/Apps/Evince;
+    homepage = "https://wiki.gnome.org/Apps/Evince";
     description = "GNOME's document viewer";
 
     longDescription = ''
@@ -125,6 +128,6 @@ stdenv.mkDerivation rec {
 
     license = stdenv.lib.licenses.gpl2Plus;
     platforms = platforms.linux;
-    maintainers = gnome3.maintainers ++ [ maintainers.vcunat ];
+    maintainers = teams.gnome.members;
   };
 }

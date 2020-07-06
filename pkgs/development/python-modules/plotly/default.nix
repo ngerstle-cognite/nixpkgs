@@ -11,11 +11,11 @@
 
 buildPythonPackage rec {
   pname = "plotly";
-  version = "3.9.0";
+  version = "4.8.1";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "498c35a2a482f7c7937fc2f3681fec653a0191dd21e40e754a6b774234cd167e";
+    sha256 = "d3fea527fe3dfdd55d7334318f107b05a8407474a0fffe6cd4726c9b99e624f1";
   };
 
   propagatedBuildInputs = [
@@ -32,7 +32,7 @@ buildPythonPackage rec {
 
   meta = {
     description = "Python plotting library for collaborative, interactive, publication-quality graphs";
-    homepage = https://plot.ly/python/;
+    homepage = "https://plot.ly/python/";
     license = with lib.licenses; [ mit ];
   };
 }

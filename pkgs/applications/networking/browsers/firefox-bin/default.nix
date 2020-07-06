@@ -8,8 +8,7 @@
 , dbus
 , fontconfig
 , freetype
-, gconf
-, gdk_pixbuf
+, gdk-pixbuf
 , glib
 , glibc
 , gtk2
@@ -27,12 +26,10 @@
 , libXinerama
 , libXrender
 , libXt
-, libcanberra-gtk2
-, libgnome
-, libgnomeui
+, libcanberra
 , libnotify
 , gnome3
-, libGLU_combined
+, libGLU, libGL
 , nspr
 , nss
 , pango
@@ -48,7 +45,7 @@
 , gnused
 , gnugrep
 , gnupg
-, ffmpeg
+, ffmpeg_3
 , runtimeShell
 , systemLocale ? config.i18n.defaultLocale or "en-US"
 }:
@@ -58,8 +55,8 @@ let
   inherit (generated) version sources;
 
   mozillaPlatforms = {
-    "i686-linux" = "linux-i686";
-    "x86_64-linux" = "linux-x86_64";
+    i686-linux = "linux-i686";
+    x86_64-linux = "linux-x86_64";
   };
 
   arch = mozillaPlatforms.${stdenv.hostPlatform.system};
@@ -103,8 +100,7 @@ stdenv.mkDerivation {
       dbus
       fontconfig
       freetype
-      gconf
-      gdk_pixbuf
+      gdk-pixbuf
       glib
       glibc
       gtk2
@@ -122,11 +118,9 @@ stdenv.mkDerivation {
       libXinerama
       libXrender
       libXt
-      libcanberra-gtk2
-      libgnome
-      libgnomeui
+      libcanberra
       libnotify
-      libGLU_combined
+      libGLU libGL
       nspr
       nss
       pango
@@ -134,7 +128,7 @@ stdenv.mkDerivation {
       libpulseaudio
       (lib.getDev libpulseaudio)
       systemd
-      ffmpeg
+      ffmpeg_3
     ] + ":" + stdenv.lib.makeSearchPathOutput "lib" "lib64" [
       stdenv.cc.cc
     ];
@@ -191,7 +185,7 @@ stdenv.mkDerivation {
   # update with:
   # $ nix-shell maintainers/scripts/update.nix --argstr package firefox-bin-unwrapped
   passthru.updateScript = import ./update.nix {
-    inherit stdenv name channel writeScript xidel coreutils gnused gnugrep gnupg curl runtimeShell;
+    inherit name channel writeScript xidel coreutils gnused gnugrep gnupg curl runtimeShell;
     baseUrl =
       if channel == "devedition"
         then "http://archive.mozilla.org/pub/devedition/releases/"
@@ -199,12 +193,12 @@ stdenv.mkDerivation {
   };
   meta = with stdenv.lib; {
     description = "Mozilla Firefox, free web browser (binary package)";
-    homepage = http://www.mozilla.org/firefox/;
+    homepage = "http://www.mozilla.org/firefox/";
     license = {
       free = false;
-      url = http://www.mozilla.org/en-US/foundation/trademarks/policy/;
+      url = "http://www.mozilla.org/en-US/foundation/trademarks/policy/";
     };
     platforms = builtins.attrNames mozillaPlatforms;
-    maintainers = with maintainers; [ garbas ];
+    maintainers = with maintainers; [ taku0 ];
   };
 }

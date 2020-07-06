@@ -1,11 +1,11 @@
 { stdenv, fetchurl, substituteAll, autoreconfHook, pkgconfig, libusb1, hwdata , python3 }:
 
 stdenv.mkDerivation rec {
-  name = "usbutils-010";
+  name = "usbutils-012";
 
   src = fetchurl {
     url = "mirror://kernel/linux/utils/usb/usbutils/${name}.tar.xz";
-    sha256 = "06aag4jfgsfjxk563xsp9ik9nadihmasrr37a1gb0vwqni5kdiv1";
+    sha256 = "0iiy0q7fzikavmdsjsb0sl9kp3gfh701qwyjjccvqh0qz4jlcqw8";
   };
 
   patches = [
@@ -24,7 +24,7 @@ stdenv.mkDerivation rec {
   '';
 
   meta = with stdenv.lib; {
-    homepage = http://www.linux-usb.org/;
+    homepage = "http://www.linux-usb.org/";
     description = "Tools for working with USB devices, such as lsusb";
     license = licenses.gpl2Plus;
     platforms = platforms.linux;

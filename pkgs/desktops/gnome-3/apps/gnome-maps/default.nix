@@ -1,17 +1,17 @@
 { stdenv, fetchurl, meson, ninja, gettext, python3, pkgconfig, gnome3, gtk3
-, gobject-introspection, gdk_pixbuf, librsvg, libgweather
+, gobject-introspection, gdk-pixbuf, librsvg, libgweather
 , geoclue2, wrapGAppsHook, folks, libchamplain, gfbgraph, libsoup, gsettings-desktop-schemas
 , webkitgtk, gjs, libgee, geocode-glib, evolution-data-server, gnome-online-accounts }:
 
 let
   pname = "gnome-maps";
-  version = "3.32.1";
+  version = "3.36.4";
 in stdenv.mkDerivation rec {
   name = "${pname}-${version}";
 
   src = fetchurl {
     url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${name}.tar.xz";
-    sha256 = "1q15qsp0ca67y4l0x31518cfakrj85x9g0cbcm0wysnbddi1aik0";
+    sha256 = "1ila7li9yi4lyjc84a787qr33wr7ayppphxn451jzg410pfcamhz";
   };
 
   doCheck = true;
@@ -21,7 +21,7 @@ in stdenv.mkDerivation rec {
     gobject-introspection
     gtk3 geoclue2 gjs libgee folks gfbgraph
     geocode-glib libchamplain libsoup
-    gdk_pixbuf librsvg libgweather
+    gdk-pixbuf librsvg libgweather
     gsettings-desktop-schemas evolution-data-server
     gnome-online-accounts gnome3.adwaita-icon-theme
     webkitgtk
@@ -48,9 +48,9 @@ in stdenv.mkDerivation rec {
   };
 
   meta = with stdenv.lib; {
-    homepage = https://wiki.gnome.org/Apps/Maps;
+    homepage = "https://wiki.gnome.org/Apps/Maps";
     description = "A map application for GNOME 3";
-    maintainers = gnome3.maintainers;
+    maintainers = teams.gnome.members;
     license = licenses.gpl2Plus;
     platforms = platforms.linux;
   };

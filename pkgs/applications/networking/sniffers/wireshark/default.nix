@@ -1,6 +1,6 @@
 { stdenv, fetchurl, pkgconfig, pcre, perl, flex, bison, gettext, libpcap, libnl, c-ares
 , gnutls, libgcrypt, libgpgerror, geoip, openssl, lua5, python3, libcap, glib
-, libssh, zlib, cmake, extra-cmake-modules, fetchpatch, makeWrapper
+, libssh, nghttp2, zlib, cmake, fetchpatch, makeWrapper
 , withQt ? true, qt5 ? null
 , ApplicationServices, SystemConfiguration, gmp
 }:
@@ -10,30 +10,36 @@ assert withQt  -> qt5  != null;
 with stdenv.lib;
 
 let
-  version = "3.0.1";
+  version = "3.2.4";
   variant = if withQt then "qt" else "cli";
+  pcap = libpcap.override { withBluez = stdenv.isLinux; };
 
 in stdenv.mkDerivation {
-  name = "wireshark-${variant}-${version}";
+  pname = "wireshark-${variant}";
+  inherit version;
   outputs = [ "out" "dev" ];
 
   src = fetchurl {
     url = "https://www.wireshark.org/download/src/all-versions/wireshark-${version}.tar.xz";
-    sha256 = "13605bpnnbqsdr8ybqnscbz9g422zmyymn4q5aci28vc1wylr1l6";
+    sha256 = "1amqgn94g6h6cfnsccm2zb4c73pfv1qmzi1i6h1hnbcyhhg4czfi";
   };
 
   cmakeFlags = [
     "-DBUILD_wireshark=${if withQt then "ON" else "OFF"}"
-    "-DENABLE_QT5=${if withQt then "ON" else "OFF"}"
     "-DENABLE_APPLICATION_BUNDLE=${if withQt && stdenv.isDarwin then "ON" else "OFF"}"
+    # Fix `extcap` and `plugins` paths. See https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=16444
+    "-DCMAKE_INSTALL_LIBDIR=lib"
   ];
+
+  # Avoid referencing -dev paths because of debug assertions.
+  NIX_CFLAGS_COMPILE = [ "-DQT_NO_DEBUG" ];
 
   nativeBuildInputs = [
-    bison cmake extra-cmake-modules flex pkgconfig
-  ];
+    bison cmake flex pkgconfig
+  ] ++ optional withQt qt5.wrapQtAppsHook;
 
   buildInputs = [
-    gettext pcre perl libpcap lua5 libssh openssl libgcrypt
+    gettext pcre perl pcap lua5 libssh nghttp2 openssl libgcrypt
     libgpgerror gnutls geoip c-ares python3 glib zlib makeWrapper
   ] ++ optionals withQt  (with qt5; [ qtbase qtmultimedia qtsvg qttools ])
     ++ optionals stdenv.isLinux  [ libcap libnl ]
@@ -70,12 +76,9 @@ in stdenv.mkDerivation {
         done
     done
 
-    wrapProgram $out/Applications/Wireshark.app/Contents/MacOS/Wireshark \
-        --set QT_PLUGIN_PATH ${qt5.qtbase.bin}/${qt5.qtbase.qtPluginPrefix}
+    wrapQtApp $out/Applications/Wireshark.app/Contents/MacOS/Wireshark
   '' else optionalString withQt ''
     install -Dm644 -t $out/share/applications ../wireshark.desktop
-    wrapProgram $out/bin/wireshark \
-        --set QT_PLUGIN_PATH ${qt5.qtbase.bin}/${qt5.qtbase.qtPluginPrefix}
 
     substituteInPlace $out/share/applications/*.desktop \
         --replace "Exec=wireshark" "Exec=$out/bin/wireshark"
@@ -95,13 +98,15 @@ in stdenv.mkDerivation {
 
   enableParallelBuilding = true;
 
+  dontFixCmake = true;
+
   shellHook = ''
     # to be able to run the resulting binary
     export WIRESHARK_RUN_FROM_BUILD_DIRECTORY=1
   '';
 
   meta = with stdenv.lib; {
-    homepage = https://www.wireshark.org/;
+    homepage = "https://www.wireshark.org/";
     description = "Powerful network protocol analyzer";
     license = licenses.gpl2;
 

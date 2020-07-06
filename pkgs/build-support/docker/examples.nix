@@ -69,6 +69,12 @@ rec {
     tag = "latest";
     contents = pkgs.nginx;
 
+    extraCommands = ''
+      # nginx still tries to read this directory even if error_log
+      # directive is specifying another file :/
+      mkdir -p var/log/nginx
+      mkdir -p var/cache/nginx
+    '';
     runAsRoot = ''
       #!${pkgs.stdenv.shell}
       ${shadowSetup}
@@ -115,9 +121,15 @@ rec {
       # the image env variable NIX_PAGER.
       pkgs.coreutils
       pkgs.nix
+      pkgs.bash
     ];
     config = {
-      Env = [ "NIX_PAGER=cat" ];
+      Env = [
+        "NIX_PAGER=cat"
+        # A user is required by nix
+        # https://github.com/NixOS/nix/blob/9348f9291e5d9e4ba3c4347ea1b235640f54fd79/src/libutil/util.cc#L478
+        "USER=nobody"
+      ];
     };
   };
 
@@ -186,5 +198,160 @@ rec {
     tag = "latest";
     runAsRoot = "touch /example-file";
     fromImage = bash;
+  };
+
+  # 13. example of 3 layers images This image is used to verify the
+  # order of layers is correct.
+  # It allows to validate
+  # - the layer of parent are below
+  # - the order of parent layer is preserved at image build time
+  #   (this is why there are 3 images)
+  layersOrder = let
+    l1 = pkgs.dockerTools.buildImage {
+      name = "l1";
+      tag = "latest";
+      extraCommands = ''
+        mkdir -p tmp
+        echo layer1 > tmp/layer1
+        echo layer1 > tmp/layer2
+        echo layer1 > tmp/layer3
+      '';
+    };
+    l2 = pkgs.dockerTools.buildImage {
+      name = "l2";
+      fromImage = l1;
+      tag = "latest";
+      extraCommands = ''
+        mkdir -p tmp
+        echo layer2 > tmp/layer2
+        echo layer2 > tmp/layer3
+      '';
+    };
+  in pkgs.dockerTools.buildImage {
+    name = "l3";
+    fromImage = l2;
+    tag = "latest";
+    contents = [ pkgs.coreutils ];
+    extraCommands = ''
+      mkdir -p tmp
+      echo layer3 > tmp/layer3
+    '';
+  };
+
+  # 14. Environment variable inheritance.
+  # Child image should inherit parents environment variables,
+  # optionally overriding them.
+  environmentVariables = let
+    parent = pkgs.dockerTools.buildImage {
+      name = "parent";
+      tag = "latest";
+      config = {
+        Env = [
+          "FROM_PARENT=true"
+          "LAST_LAYER=parent"
+        ];
+      };
+    };
+  in pkgs.dockerTools.buildImage {
+    name = "child";
+    fromImage = parent;
+    tag = "latest";
+    contents = [ pkgs.coreutils ];
+    config = {
+      Env = [
+        "FROM_CHILD=true"
+        "LAST_LAYER=child"
+      ];
+    };
+  };
+
+  # 15. Create another layered image, for comparing layers with image 10.
+  another-layered-image = pkgs.dockerTools.buildLayeredImage {
+    name = "another-layered-image";
+    tag = "latest";
+    config.Cmd = [ "${pkgs.hello}/bin/hello" ];
+  };
+
+  # 16. Create a layered image with only 2 layers
+  two-layered-image = pkgs.dockerTools.buildLayeredImage {
+    name = "two-layered-image";
+    tag = "latest";
+    config.Cmd = [ "${pkgs.hello}/bin/hello" ];
+    contents = [ pkgs.bash pkgs.hello ];
+    maxLayers = 2;
+  };
+
+  # 17. Create a layered image with more packages than max layers.
+  # coreutils and hello are part of the same layer
+  bulk-layer = pkgs.dockerTools.buildLayeredImage {
+    name = "bulk-layer";
+    tag = "latest";
+    contents = with pkgs; [
+      coreutils hello
+    ];
+    maxLayers = 2;
+  };
+
+  # 18. Create a "layered" image without nix store layers. This is not
+  # recommended, but can be useful for base images in rare cases.
+  no-store-paths = pkgs.dockerTools.buildLayeredImage {
+    name = "no-store-paths";
+    tag = "latest";
+    extraCommands = ''
+      chmod a+w bin
+
+      # This removes sharing of busybox and is not recommended. We do this
+      # to make the example suitable as a test case with working binaries.
+      cp -r ${pkgs.pkgsStatic.busybox}/* .
+    '';
+    contents = [
+      # This layer has no dependencies and its symlinks will be dereferenced
+      # when creating the customization layer.
+      (pkgs.runCommand "layer-to-flatten" {} ''
+        mkdir -p $out/bin
+        ln -s /bin/true $out/bin/custom-true
+      ''
+      )
+    ];
+  };
+
+  nixLayered = pkgs.dockerTools.buildLayeredImageWithNixDb {
+    name = "nix-layered";
+    tag = "latest";
+    contents = [
+      # nix-store uses cat program to display results as specified by
+      # the image env variable NIX_PAGER.
+      pkgs.coreutils
+      pkgs.nix
+      pkgs.bash
+    ];
+    config = {
+      Env = [
+        "NIX_PAGER=cat"
+        # A user is required by nix
+        # https://github.com/NixOS/nix/blob/9348f9291e5d9e4ba3c4347ea1b235640f54fd79/src/libutil/util.cc#L478
+        "USER=nobody"
+      ];
+    };
+  };
+
+  # 19. Support files in the store on buildLayeredImage
+  # See: https://github.com/NixOS/nixpkgs/pull/91084#issuecomment-653496223
+  filesInStore = pkgs.dockerTools.buildLayeredImageWithNixDb {
+    name = "file-in-store";
+    tag = "latest";
+    contents = [
+      pkgs.coreutils
+      pkgs.nix
+      (pkgs.writeScriptBin "myscript" ''
+        #!${pkgs.runtimeShell}
+        cat ${pkgs.writeText "somefile" "some data"}
+      '')
+    ];
+    config = {
+      Cmd = [ "myscript" ];
+      # For some reason 'nix-store --verify' requires this environment variable
+      Env = [ "USER=root" ];
+    };
   };
 }

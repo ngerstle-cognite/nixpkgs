@@ -5,17 +5,16 @@ let
 in
 buildPythonApplication rec {
   pname = "fava";
-  version = "1.10";
+  version = "1.15";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "145995nzgr06qsn619zap0xqa8ckfrp5azga41smyszq97pd01sj";
+    sha256 = "037fhimfjiqay28wg7hd5sm7r0935ynw9d905iszn965ihr1qsgz";
   };
 
-  doCheck = false;
-
+  checkInputs = [ python3.pkgs.pytest ];
   propagatedBuildInputs = with python3.pkgs;
-    [ 
+    [
       Babel
       cheroot
       flaskbabel
@@ -26,10 +25,18 @@ buildPythonApplication rec {
       markdown2
       ply
       simplejson
+      werkzeug
+      jaraco_functools
     ];
 
+  # CLI test expects fava on $PATH.  Not sure why static_url fails.
+  # the entry_slices and render_entries requires other files to pass
+  checkPhase = ''
+    py.test tests -k 'not cli and not static_url and not entry_slice and not render_entries'
+  '';
+
   meta = {
-    homepage = https://beancount.github.io/fava;
+    homepage = "https://beancount.github.io/fava";
     description = "Web interface for beancount";
     license = stdenv.lib.licenses.mit;
     maintainers = with stdenv.lib.maintainers; [ matthiasbeyer ];

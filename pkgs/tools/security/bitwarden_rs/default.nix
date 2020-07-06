@@ -1,25 +1,43 @@
-{ lib, rustPlatform, fetchFromGitHub, pkgconfig, openssl }:
+{ stdenv, rustPlatform, fetchFromGitHub
+, pkgconfig, openssl
+, Security, CoreServices
+, dbBackend ? "sqlite", libmysqlclient, postgresql }:
 
-rustPlatform.buildRustPackage rec {
+let
+  featuresFlag = "--features ${dbBackend}";
+
+in rustPlatform.buildRustPackage rec {
   pname = "bitwarden_rs";
-  version = "1.8.0";
+  version = "1.15.1";
 
   src = fetchFromGitHub {
     owner = "dani-garcia";
     repo = pname;
     rev = version;
-    sha256 = "0jz9r6ck6sfz4ig95x0ja6g5ikyq6z0xw1zn9zf4kxha4klqqbkx";
+    sha256 = "1982bfprixdp8mx2hwidfvsi0zy7wmzf40m9m3cl5r7i2qydznwb";
   };
 
-  buildInputs = [ pkgconfig openssl ];
+  nativeBuildInputs = [ pkgconfig ];
+  buildInputs = with stdenv.lib; [ openssl ]
+    ++ optionals stdenv.isDarwin [ Security CoreServices ]
+    ++ optional (dbBackend == "mysql") libmysqlclient
+    ++ optional (dbBackend == "postgresql") postgresql;
 
   RUSTC_BOOTSTRAP = 1;
 
-  cargoSha256 = "02xrz7vq8nan70f07xyf335blfmdc6gaz9sbfjipsi1drgfccf09";
+  cargoSha256 = "08cygzgv82i10cj8lkjdah0arrdmlfcbdjwc8piwa629rr0584zf";
+  cargoBuildFlags = [ featuresFlag ];
 
-  meta = with lib; {
-    description = "An unofficial lightweight implementation of the Bitwarden server API using Rust and SQLite";
-    homepage = https://github.com/dani-garcia/bitwarden_rs;
+  checkPhase = ''
+    runHook preCheck
+    echo "Running cargo cargo test ${featuresFlag} -- ''${checkFlags} ''${checkFlagsArray+''${checkFlagsArray[@]}}"
+    cargo test ${featuresFlag} -- ''${checkFlags} ''${checkFlagsArray+"''${checkFlagsArray[@]}"}
+    runHook postCheck
+  '';
+
+  meta = with stdenv.lib; {
+    description = "Unofficial Bitwarden compatible server written in Rust";
+    homepage = "https://github.com/dani-garcia/bitwarden_rs";
     license = licenses.gpl3;
     maintainers = with maintainers; [ msteen ];
     platforms = platforms.all;

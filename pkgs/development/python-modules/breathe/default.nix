@@ -1,12 +1,13 @@
-{ lib, fetchPypi, buildPythonPackage, docutils, six, sphinx, isPy3k }:
+{ lib, fetchPypi, buildPythonPackage, docutils, six, sphinx, isPy3k, isPy27 }:
 
 buildPythonPackage rec {
-  version = "4.12.0";
+  version = "4.18.1";
   pname = "breathe";
+  disabled = isPy27;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1wmxppzyvfd5gab72qi3gainibrdk4xi8nsfp5z5h49xgzi84mnq";
+    sha256 = "03f56cc6dd0bf5ac3d8e8eb380d212257e16de79fce5e6186afd5c1835561e22";
   };
 
   propagatedBuildInputs = [ docutils six sphinx ];
@@ -14,7 +15,7 @@ buildPythonPackage rec {
   doCheck = !isPy3k;
 
   meta = {
-    homepage = https://github.com/michaeljones/breathe;
+    homepage = "https://github.com/michaeljones/breathe";
     license = lib.licenses.bsd3;
     description = "Sphinx Doxygen renderer";
     inherit (sphinx.meta) platforms;

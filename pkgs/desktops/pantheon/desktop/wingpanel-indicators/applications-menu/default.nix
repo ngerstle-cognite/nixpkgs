@@ -1,70 +1,94 @@
-{ stdenv, fetchFromGitHub, pantheon, substituteAll, cmake, ninja
-, pkgconfig, vala, granite, libgee, gettext, gtk3, appstream, gnome-menus
-, json-glib, plank, bamf, switchboard, libunity, libsoup, wingpanel, libwnck3
-, zeitgeist, gobject-introspection, elementary-icon-theme, bc, wrapGAppsHook }:
+{ stdenv
+, fetchFromGitHub
+, pantheon
+, substituteAll
+, meson
+, ninja
+, python3
+, pkgconfig
+, vala
+, granite
+, libgee
+, gettext
+, gtk3
+, appstream
+, gnome-menus
+, json-glib
+, plank
+, bamf
+, switchboard
+, libunity
+, libsoup
+, wingpanel
+, zeitgeist
+, bc
+, libhandy
+}:
 
 stdenv.mkDerivation rec {
-  pname = "applications-menu";
-  version = "2.4.2";
+  pname = "wingpanel-applications-menu";
+  version = "2.7.1";
 
-  name = "wingpanel-${pname}-${version}";
+  repoName = "applications-menu";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
+    repo = repoName;
     rev = version;
-    sha256 = "0y7kh50ixvm4m56v18c70s05hhpfp683c4qi3sxy50p2368d772x";
+    sha256 = "0wsfvyp0z6c612nl348dr6sar0qghhfcgkzcx3108x8v743v7rim";
   };
 
   passthru = {
     updateScript = pantheon.updateScript {
-      repoName = pname;
-      attrPath = "wingpanel-${pname}";
+      attrPath = "pantheon.${pname}";
     };
   };
 
   nativeBuildInputs = [
     appstream
-    cmake
-    ninja
     gettext
-    gobject-introspection
+    meson
+    ninja
     pkgconfig
+    python3
     vala
-    wrapGAppsHook
    ];
 
   buildInputs = [
     bamf
-    elementary-icon-theme
     gnome-menus
     granite
     gtk3
     json-glib
     libgee
+    libhandy
     libsoup
     libunity
-    libwnck3
     plank
     switchboard
     wingpanel
     zeitgeist
    ];
 
-  PKG_CONFIG_WINGPANEL_2_0_INDICATORSDIR = "${placeholder ''out''}/lib/wingpanel";
-  PKG_CONFIG_SWITCHBOARD_2_0_PLUGSDIR = "${placeholder ''out''}/lib/switchboard";
+  mesonFlags = [
+    "--sysconfdir=${placeholder "out"}/etc"
+  ];
 
   patches = [
     (substituteAll {
-      src = ./bc.patch;
-      exec = "${bc}/bin/bc";
+      src = ./fix-paths.patch;
+      bc = "${bc}/bin/bc";
     })
-    ./xdg.patch
   ];
+
+  postPatch = ''
+    chmod +x meson/post_install.py
+    patchShebangs meson/post_install.py
+  '';
 
   meta = with stdenv.lib; {
     description = "Lightweight and stylish app launcher for Pantheon";
-    homepage = https://github.com/elementary/applications-menu;
+    homepage = "https://github.com/elementary/applications-menu";
     license = licenses.gpl3Plus;
     platforms = platforms.linux;
     maintainers = pantheon.maintainers;

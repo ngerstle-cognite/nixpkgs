@@ -1,30 +1,67 @@
-{ stdenv, fetchurl, vala, meson, ninja, libpwquality
-, pkgconfig, gtk3, glib, gobject-introspection
-, wrapGAppsHook, itstool, gnupg, libsoup
-, gnome3, gpgme, python3, openldap, gcr
-, libsecret, avahi, p11-kit, openssh, gsettings-desktop-schemas }:
+{ stdenv
+, fetchurl
+, fetchpatch
+, vala
+, meson
+, ninja
+, libpwquality
+, pkgconfig
+, gtk3
+, glib
+, wrapGAppsHook
+, itstool
+, gnupg
+, libsoup
+, gnome3
+, gpgme
+, python3
+, openldap
+, gcr
+, libsecret
+, avahi
+, p11-kit
+, openssh
+, gsettings-desktop-schemas
+, libhandy
+}:
 
 stdenv.mkDerivation rec {
   pname = "seahorse";
-  version = "3.32.1";
+  version = "3.36.2";
 
   src = fetchurl {
     url = "mirror://gnome/sources/${pname}/${stdenv.lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
-    sha256 = "1nh2gahiixj661a3l008yhidx952q50fqgdckg8l0d237wnwp7f6";
+    sha256 = "16wmxxppgcgfj8zkagcny5af1c81x32ysm9d6j9f2k7bmik21ss5";
   };
 
   doCheck = true;
 
   nativeBuildInputs = [
-    meson ninja pkgconfig vala itstool wrapGAppsHook
-    python3 gobject-introspection
+    meson
+    ninja
+    pkgconfig
+    vala
+    itstool
+    wrapGAppsHook
+    python3
   ];
+
   buildInputs = [
-    gtk3 glib gcr
-    gsettings-desktop-schemas gnupg
-    gnome3.adwaita-icon-theme gpgme
-    libsecret avahi libsoup p11-kit
-    openssh openldap libpwquality
+    gtk3
+    glib
+    gcr
+    gsettings-desktop-schemas
+    gnupg
+    gnome3.adwaita-icon-theme
+    gpgme
+    libsecret
+    avahi
+    libsoup
+    p11-kit
+    openssh
+    openldap
+    libpwquality
+    libhandy
   ];
 
   postPatch = ''
@@ -39,9 +76,9 @@ stdenv.mkDerivation rec {
   };
 
   meta = with stdenv.lib; {
-    homepage = https://wiki.gnome.org/Apps/Seahorse;
+    homepage = "https://wiki.gnome.org/Apps/Seahorse";
     description = "Application for managing encryption keys and passwords in the GnomeKeyring";
-    maintainers = gnome3.maintainers;
+    maintainers = teams.gnome.members;
     license = licenses.gpl2;
     platforms = platforms.linux;
   };
