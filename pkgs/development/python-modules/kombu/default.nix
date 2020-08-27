@@ -12,11 +12,11 @@
 
 buildPythonPackage rec {
   pname = "kombu";
-  version = "4.6.10";
+  version = "5.0.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "437b9cdea193cc2ed0b8044c85fd0f126bb3615ca2f4d4a35b39de7cacfa3c1a";
+    sha256 = "7c949fe33573a971f06c8836ca025390088f3747533b78438f9a57344a142b59";
   };
 
   postPatch = ''
